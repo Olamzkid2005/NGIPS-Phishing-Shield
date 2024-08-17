@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phishing Detection App</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Phishing URL Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
 </head>
 <body>
     <div class="container">
-        <h1>Phishing Detection</h1>
-        <form method="POST">
+        <h1>Phishing Detection Software</h1>
+        <p>This is a Phishing Website Prediction Model</p>
+        <p>Enter a URL to check if it's a potential phishing link. This tool analyzes the link and provides a prediction.</p>
+        <form action="{{ url_for('predict') }}" method="POST">
             <label for="url">Enter URL:</label>
             <input type="text" id="url" name="url" required>
             <button type="submit">Check</button>

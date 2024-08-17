@@ -4,27 +4,27 @@ import os
 
 app = Flask(__name__)
 
-# Load the phishing detection model
-model_path = 'phishing_model.pkl'
+# Load the phishing detection model pipeline (which includes the vectorizer)
+model_path = r"C:\Users\Olamzkid\Documents\Final Year Project\phishingApp.pkl"
+
 if os.path.exists(model_path):
     model = joblib.load(model_path)
 else:
-    model = None
+    raise FileNotFoundError("Model not found!")
 
-def predict_phishing(url):
-    if model:
-        prediction = model.predict([url])
-        return 'Phishing' if prediction[0] == 1 else 'Legitimate'
-    else:
-        return 'Model not loaded'
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    prediction = None
+@app.route('/predict', methods=['POST'])
+def predict():
     if request.method == 'POST':
         url = request.form['url']
-        prediction = predict_phishing(url)
-    return render_template('index.html', prediction=prediction)
+        
+        # Predict using the loaded model pipeline
+        prediction = model.predict([url])
+        
+        return render_template('result.html', prediction=prediction[0])
 
 if __name__ == '__main__':
     app.run(debug=True)
