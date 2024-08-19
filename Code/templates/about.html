@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Phishing Detection Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <main class="container" role="main" aria-labelledby="about-title">
+        <h1 id="about-title">About the Phishing Detection Tool</h1>
+
+        <section aria-labelledby="how-to-use">
+            <h2 id="how-to-use">1. How to Use the App</h2>
+            <p>To use this app, simply enter the URL of a website you suspect might be phishing in the provided input box on the home page. After clicking the "Check" button, the app will analyze the URL and provide a prediction indicating whether the website is safe or potentially harmful.</p>
+        </section>
+
+        <section aria-labelledby="what-is-phishing">
+            <h2 id="what-is-phishing">2. What Are Phishing Websites?</h2>
+            <p>Phishing websites are fraudulent sites designed to steal sensitive information like usernames, passwords, and credit card details by pretending to be legitimate. These websites often look very similar to genuine sites, making them difficult to detect without proper tools.</p>
+        </section>
+
+        <section aria-labelledby="tool-accuracy">
+            <h2 id="tool-accuracy">3. How This Tool Can Help You with 98% Accuracy</h2>
+            <p>Our phishing detection tool uses advanced machine learning algorithms to analyze URLs with 98% accuracy. By comparing features like domain age, URL length, and the presence of certain keywords, the tool can identify suspicious URLs and help you avoid falling victim to phishing attacks.</p>
+        </section>
+
+        <a href="{{ url_for('home') }}" class="button">Go Back to Home</a>
+    </main>
+</body>
+</html>

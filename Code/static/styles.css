@@ -81,3 +81,61 @@ button:hover {
     transition: width 0.5s;
     border-radius: 15px; 
 }
+
+textarea {
+    padding: 5px;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 150px;
+    width: 60%;
+    margin: 0 auto; /* Center horizontally */
+    display: block;
+}
+
+.message {
+    font-size: 1rem;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 20px;
+}
+
+.message.positive {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.message.negative {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+#progress-container {
+    margin-top: 20px;
+    text-align: left;
+    display: none; /* Hidden until the process starts */
+}
+
+#progress-bar {
+    height: 10px;
+    background-color: #007BFF;
+    width: 0%;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    transition: width 0.3s ease;
+}
+
+#progress-steps {
+    list-style-type: none;
+    padding: 0;
+}
+
+#progress-steps li {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    opacity: 0.5;
+}
+
+#progress-steps li.completed {
+    opacity: 1;
+    font-weight: bold;
+}

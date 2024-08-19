@@ -5,24 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phishing URL Detection</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Phishing Detection Software</h1>
+    <main class="container" role="main" aria-labelledby="title">
+        <h1 id="title">Phishing Detection Software</h1>
         <p>This is a Phishing Website Prediction Model</p>
         <p>Enter a URL to check if it's a potential phishing link. This tool analyzes the link and provides a prediction.</p>
-        <form action="{{ url_for('predict') }}" method="POST">
+        <form action="{{ url_for('predict') }}" method="POST" aria-describedby="form-instructions">
             <label for="url">Enter URL:</label>
-            <input type="text" id="url" name="url" required>
+            <input type="text" id="url" name="url" required aria-required="true">
             <button type="submit">Check</button>
         </form>
-        {% if prediction %}
-            <div class="result">
-                <h2>Prediction: {{ prediction }}</h2>
-            </div>
-        {% endif %}
-    </div>
+
+        <!-- Progress section -->
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+            <ul id="progress-steps">
+                <li id="step-tokenization">Applying Tokenization...</li>
+                <li id="step-feature-extraction">Applying Feature Extraction...</li>
+                <li id="step-stemmization">Performing Stemmization...</li>
+                <li id="step-detection">Detecting if the URL is Legit or Bad...</li>
+            </ul>
+        </div>
+        
+        <a href="{{ url_for('about') }}">Learn More About Phishing</a>
+    </main>
 </body>
 </html>
