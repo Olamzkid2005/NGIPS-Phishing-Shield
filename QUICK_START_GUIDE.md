@@ -1,458 +1,294 @@
-# Quick Start Guide: NGIPS Transformation
-## Get Started in 30 Minutes
+# NGIPS Phishing Shield - Quick Start Guide
 
----
+## Project Status
 
-## 🎯 What We're Building
+### ✅ Completed Tasks
 
-Transform your Flask phishing detector into a **production-ready NGIPS** with:
-- ⚡ FastAPI backend (10x faster than Flask)
-- 🔌 Browser extension (real-time protection)
-- 📊 Next.js dashboard (modern UI)
-- 💾 SQLite + Prisma (persistent storage)
+#### Phase 1: Backend Foundation
 
----
+- **Task 0**: Archive existing Flask application ✅
+  - Flask app moved to `legacy/` directory
+  - Documentation updated
+  - Changes committed to git
 
-## 📋 Prerequisites
+- **Task 1**: Set up FastAPI project structure ✅
+  - Created `backend/` directory with proper Python package structure
+  - Implemented FastAPI application entry point (`app/main.py`)
+  - Implemented environment configuration (`app/core/config.py`)
+  - Implemented structured logging (`app/core/log_config.py`)
+  - Created `requirements.txt` with all dependencies
+  - Created `.env.example` for configuration reference
 
-### Required Software
+### 🔄 Current Status
+
+**Backend foundation is complete and tested!**
+
+The FastAPI application can now:
+- Start successfully with proper configuration
+- Log structured JSON or text format logs
+- Handle CORS for browser extension
+- Provide health check endpoint
+- Load configuration from environment variables
+
+### 📁 Project Structure
+
+```
+Olazkid-phishing-detection-software/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                    # FastAPI application entry point
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       └── __init__.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py              # Environment configuration
+│   │   │   └── log_config.py          # Structured logging
+│   │   ├── db/
+│   │   │   └── __init__.py
+│   │   ├── ml/
+│   │   │   └── __init__.py
+│   │   └── threat_intel/
+│   │       └── __init__.py
+│   ├── models/                        # ML model files (to be added)
+│   ├── tests/                         # Test files (to be added)
+│   ├── requirements.txt               # Python dependencies
+│   ├── .env.example                   # Environment configuration template
+│   └── test_startup.py                # Startup verification script
+├── legacy/                            # Archived Flask application
+├── Dataset/                           # Training datasets
+├── phishingApp.pkl                    # Logistic Regression model
+├── phishingApp Updated.pkl            # Naive Bayes model
+└── .kiro/
+    └── specs/
+        └── ngips-transformation-with-ai/
+            ├── requirements.md        # Project requirements
+            ├── design.md              # Technical design
+            └── tasks.md               # Implementation tasks
+
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- pip (Python package manager)
+- Git
+
+### Installation
+
+1. **Navigate to backend directory:**
+   ```bash
+   cd backend
+   ```
+
+2. **Create virtual environment (recommended):**
+   ```bash
+   python -m venv venv
+   
+   # On Windows:
+   venv\Scripts\activate
+   
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Create .env file:**
+   ```bash
+   # Copy the example file
+   cp .env.example .env
+   
+   # Edit .env and update values as needed
+   ```
+
+5. **Test the installation:**
+   ```bash
+   python test_startup.py
+   ```
+   
+   You should see:
+   ```
+   ✓ All imports successful
+   ✓ FastAPI app created: NGIPS Phishing Shield API
+   ✓ Settings loaded: Environment=development
+   ✓ Log level: INFO
+   
+   ✓✓✓ Backend startup test PASSED ✓✓✓
+   ```
+
+### Running the Backend
+
+**Development mode with auto-reload:**
 ```bash
-# Check if you have these installed:
-python --version    # Need 3.9+
-node --version      # Need 18+
-npm --version       # Need 9+
-git --version       # Any recent version
-```
-
-### Install Missing Tools
-```bash
-# Python (if needed)
-# Download from: https://www.python.org/downloads/
-
-# Node.js (if needed)
-# Download from: https://nodejs.org/
-
-# Git (if needed)
-# Download from: https://git-scm.com/
-```
-
----
-
-## 🚀 Phase 1: FastAPI Backend (Start Here!)
-
-### Step 1: Create Backend Structure
-
-```bash
-# Navigate to your project
-cd "Olazkid-phishing-detection-software"
-
-# Create backend folder structure
-mkdir -p backend/app/api/v1/endpoints
-mkdir -p backend/app/core
-mkdir -p backend/app/ml
-mkdir -p backend/app/db
-mkdir -p backend/models
-mkdir -p backend/tests
-```
-
-### Step 2: Set Up Python Environment
-
-```bash
-# Create virtual environment
-python -m venv backend/venv
-
-# Activate it (Windows)
-backend\venv\Scripts\activate
-
-# Activate it (Mac/Linux)
-source backend/venv/bin/activate
-```
-
-### Step 3: Install Dependencies
-
-Create `backend/requirements.txt`:
-```txt
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
-scikit-learn==1.3.2
-joblib==1.3.2
-numpy==1.26.2
-pandas==2.1.3
-python-multipart==0.0.6
-python-dotenv==1.0.0
-prisma==0.11.0
-```
-
-Install:
-```bash
-pip install -r backend/requirements.txt
-```
-
-### Step 4: Create FastAPI Application
-
-Create `backend/app/main.py`:
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.router import api_router
-from app.core.config import settings
-
-app = FastAPI(
-    title="NGIPS Phishing Detection API",
-    description="AI-powered phishing detection engine",
-    version="1.0.0"
-)
-
-# CORS for browser extension
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include API routes
-app.include_router(api_router, prefix="/api/v1")
-
-@app.get("/")
-async def root():
-    return {
-        "message": "NGIPS Phishing Detection API",
-        "version": "1.0.0",
-        "status": "operational"
-    }
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-```
-
-### Step 5: Create Configuration
-
-Create `backend/app/core/config.py`:
-```python
-from pydantic_settings import BaseSettings
-from typing import Optional
-
-class Settings(BaseSettings):
-    # API Settings
-    API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "NGIPS Phishing Detection"
-    
-    # Model Settings
-    MODEL_PATH: str = "../models"
-    LOGISTIC_MODEL: str = "logistic_regression.pkl"
-    NAIVE_BAYES_MODEL: str = "naive_bayes.pkl"
-    
-    # Database
-    DATABASE_URL: str = "file:../database/ngips.db"
-    
-    # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
-settings = Settings()
-```
-
-### Step 6: Create ML Inference Module
-
-Create `backend/app/ml/inference.py`:
-```python
-import joblib
-import numpy as np
-from pathlib import Path
-from typing import Dict, List
-import re
-from urllib.parse import urlparse
-
-class PhishingDetector:
-    def __init__(self, model_path: str):
-        self.model_path = Path(model_path)
-        self.model = None
-        self.load_model()
-    
-    def load_model(self):
-        """Load the trained model"""
-        try:
-            model_file = self.model_path / "phishingApp.pkl"
-            self.model = joblib.load(model_file)
-            print(f"✅ Model loaded from {model_file}")
-        except Exception as e:
-            print(f"❌ Error loading model: {e}")
-            raise
-    
-    def extract_features(self, url: str) -> Dict[str, float]:
-        """Extract features from URL"""
-        parsed = urlparse(url)
-        
-        features = {
-            "url_length": len(url),
-            "domain_length": len(parsed.netloc),
-            "path_length": len(parsed.path),
-            "has_ip": int(bool(re.match(r'\d+\.\d+\.\d+\.\d+', parsed.netloc))),
-            "has_at": int('@' in url),
-            "has_double_slash": int('//' in parsed.path),
-            "num_dots": url.count('.'),
-            "num_hyphens": url.count('-'),
-            "num_underscores": url.count('_'),
-            "num_digits": sum(c.isdigit() for c in url),
-            "has_https": int(parsed.scheme == 'https'),
-        }
-        
-        return features
-    
-    def predict(self, url: str) -> Dict[str, any]:
-        """Predict if URL is phishing"""
-        try:
-            # Use the model's predict method
-            prediction = self.model.predict([url])[0]
-            
-            # Get probability if available
-            try:
-                proba = self.model.predict_proba([url])[0]
-                confidence = float(max(proba))
-            except:
-                confidence = 0.85  # Default confidence
-            
-            is_phishing = bool(prediction == 1)
-            
-            return {
-                "url": url,
-                "is_phishing": is_phishing,
-                "confidence": confidence,
-                "action": "block" if is_phishing else "allow",
-                "threat_level": self._get_threat_level(confidence, is_phishing)
-            }
-        except Exception as e:
-            print(f"Prediction error: {e}")
-            return {
-                "url": url,
-                "is_phishing": False,
-                "confidence": 0.0,
-                "action": "allow",
-                "error": str(e)
-            }
-    
-    def _get_threat_level(self, confidence: float, is_phishing: bool) -> str:
-        """Determine threat level"""
-        if not is_phishing:
-            return "safe"
-        if confidence > 0.9:
-            return "critical"
-        elif confidence > 0.7:
-            return "high"
-        else:
-            return "medium"
-
-# Global detector instance
-detector = None
-
-def get_detector(model_path: str = "../models") -> PhishingDetector:
-    """Get or create detector instance"""
-    global detector
-    if detector is None:
-        detector = PhishingDetector(model_path)
-    return detector
-```
-
-### Step 7: Create API Endpoint
-
-Create `backend/app/api/v1/endpoints/analyze.py`:
-```python
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, HttpUrl
-from typing import Optional
-from app.ml.inference import get_detector
-import time
-
-router = APIRouter()
-
-class URLAnalysisRequest(BaseModel):
-    url: str
-    user_id: Optional[str] = None
-
-class URLAnalysisResponse(BaseModel):
-    url: str
-    is_phishing: bool
-    confidence: float
-    action: str
-    threat_level: str
-    analysis_time_ms: float
-    timestamp: str
-
-@router.post("/analyze", response_model=URLAnalysisResponse)
-async def analyze_url(request: URLAnalysisRequest):
-    """
-    Analyze a URL for phishing threats
-    
-    - **url**: The URL to analyze
-    - **user_id**: Optional user identifier for logging
-    """
-    start_time = time.time()
-    
-    try:
-        # Get detector instance
-        detector = get_detector()
-        
-        # Perform analysis
-        result = detector.predict(request.url)
-        
-        # Calculate analysis time
-        analysis_time = (time.time() - start_time) * 1000
-        
-        # Add metadata
-        result["analysis_time_ms"] = round(analysis_time, 2)
-        result["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        
-        return result
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Analysis failed: {str(e)}"
-        )
-
-@router.get("/stats")
-async def get_stats():
-    """Get API statistics"""
-    return {
-        "total_scans": 0,  # TODO: Implement with database
-        "blocked_threats": 0,
-        "uptime": "100%",
-        "model_version": "1.0.0"
-    }
-```
-
-### Step 8: Create API Router
-
-Create `backend/app/api/v1/router.py`:
-```python
-from fastapi import APIRouter
-from app.api.v1.endpoints import analyze
-
-api_router = APIRouter()
-
-api_router.include_router(
-    analyze.router,
-    tags=["analysis"]
-)
-```
-
-### Step 9: Copy Your Model
-
-```bash
-# Copy your trained model to the backend
-cp phishingApp.pkl backend/models/
-```
-
-### Step 10: Run the API!
-
-```bash
-# Make sure you're in the backend directory
 cd backend
-
-# Run with uvicorn
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Step 11: Test It!
+**Access the API:**
+- API Root: http://localhost:8000/
+- Health Check: http://localhost:8000/health
+- API Documentation: http://localhost:8000/docs
+- Alternative Docs: http://localhost:8000/redoc
 
-Open your browser and go to:
-- http://localhost:8000 - API info
-- http://localhost:8000/docs - Interactive API documentation
-- http://localhost:8000/health - Health check
+## Next Steps
 
-Test the API:
+### Task 2: Implement ML Model Loading (Next)
+
+The next task is to implement ML model loading and management:
+
+1. Create `app/ml/models.py` with model loading functions
+2. Load existing Logistic Regression and Naive Bayes models
+3. Implement model validation on startup
+4. Add model versioning metadata
+
+**Files to create:**
+- `backend/app/ml/models.py`
+- `backend/app/ml/feature_extraction.py`
+
+### Task 3: Implement Ensemble Prediction Logic
+
+After model loading, implement the ensemble prediction system:
+
+1. Create `app/ml/ensemble.py` with weighted voting logic
+2. Combine predictions from multiple models
+3. Calculate confidence scores
+4. Implement uncertainty quantification
+
+### Task 4: Implement API Endpoints
+
+Create the main analysis endpoint:
+
+1. Create `app/api/v1/analyze.py` with POST `/v1/analyze` endpoint
+2. Define Pydantic request/response models
+3. Implement input validation
+4. Add request logging
+
+## Configuration
+
+### Environment Variables
+
+Key configuration options in `.env`:
+
 ```bash
-# Using curl (Windows PowerShell)
-Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Body '{"url": "http://suspicious-site.com"}'
+# Environment
+ENVIRONMENT=development          # development, staging, production
+DEBUG=true                       # Enable debug mode
 
-# Using curl (Mac/Linux)
-curl -X POST "http://localhost:8000/api/v1/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "http://suspicious-site.com"}'
+# API
+API_HOST=0.0.0.0                # API host
+API_PORT=8000                    # API port
+
+# CORS (comma-separated)
+CORS_ORIGINS=chrome-extension://*,http://localhost:3000
+
+# Database
+DATABASE_URL=file:./ngips.db    # SQLite database path
+
+# Logging
+LOG_LEVEL=INFO                   # DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_FORMAT=text                  # json or text
+
+# ML Models
+LOGISTIC_REGRESSION_MODEL_PATH=../phishingApp.pkl
+NAIVE_BAYES_MODEL_PATH=../phishingApp Updated.pkl
+MODEL_VERSION=1.0.0
+
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=100
+RATE_LIMIT_ENABLED=true
+
+# Cache
+CACHE_ENABLED=true
+CACHE_TTL_SECONDS=3600          # 1 hour
+
+# Security
+SECRET_KEY=change-me-in-production  # MUST change in production!
+
+# Threat Intelligence
+THREAT_INTEL_ENABLED=false
+PHISHTANK_API_KEY=
 ```
 
----
+## Testing
 
-## ✅ Success Checklist
-
-After completing Phase 1, you should have:
-- ✅ FastAPI running on http://localhost:8000
-- ✅ Interactive docs at http://localhost:8000/docs
-- ✅ `/api/v1/analyze` endpoint working
-- ✅ ML model loaded and making predictions
-- ✅ Response time < 100ms
-
----
-
-## 🎉 What's Next?
-
-You've completed **Phase 1: Backend Modernization**!
-
-### Next Steps:
-1. **Phase 2: Database Layer** - Add SQLite + Prisma for persistence
-2. **Phase 3: Browser Extension** - Build the real-time sensor
-3. **Phase 4: Next.js Dashboard** - Create the management UI
-
-### Want to Continue?
-
-Choose your path:
-- 🗄️ **Add Database** → See `DATABASE_SETUP.md`
-- 🔌 **Build Extension** → See `EXTENSION_GUIDE.md`
-- 📊 **Create Dashboard** → See `DASHBOARD_GUIDE.md`
-
----
-
-## 🐛 Troubleshooting
-
-### Model Not Loading
+### Run Startup Test
 ```bash
-# Check if model file exists
-ls backend/models/phishingApp.pkl
-
-# If missing, copy from root
-cp phishingApp.pkl backend/models/
+cd backend
+python test_startup.py
 ```
 
-### Port Already in Use
+### Run Unit Tests (when implemented)
 ```bash
-# Use a different port
-uvicorn app.main:app --reload --port 8001
+cd backend
+pytest tests/ -v
 ```
+
+### Run with Coverage (when implemented)
+```bash
+cd backend
+pytest tests/ --cov=app --cov-report=html
+```
+
+## Development Workflow
+
+1. **Check current task** in `.kiro/specs/ngips-transformation-with-ai/tasks.md`
+2. **Implement the task** following TDD principles:
+   - Write failing test first
+   - Implement minimal code to pass
+   - Refactor if needed
+3. **Test your changes**:
+   - Run unit tests
+   - Test manually with curl/Postman
+4. **Commit your changes**:
+   ```bash
+   git add .
+   git commit -m "feat: implement [task description]"
+   ```
+5. **Move to next task**
+
+## Troubleshooting
 
 ### Import Errors
-```bash
-# Make sure you're in the backend directory
-cd backend
 
-# Reinstall dependencies
-pip install -r requirements.txt
-```
+If you see import errors, ensure:
+1. Virtual environment is activated
+2. All dependencies are installed: `pip install -r requirements.txt`
+3. You're running commands from the correct directory
 
-### CORS Errors
-- Check that CORS middleware is configured in `main.py`
-- Verify `allow_origins` includes your frontend URL
+### Model File Not Found
 
----
+If you see "model not found" errors:
+1. Check that `phishingApp.pkl` and `phishingApp Updated.pkl` exist in the project root
+2. Update paths in `.env` if models are in a different location
 
-## 📚 Additional Resources
+### Port Already in Use
 
-- [FastAPI Tutorial](https://fastapi.tiangolo.com/tutorial/)
-- [Uvicorn Documentation](https://www.uvicorn.org/)
-- [Pydantic Models](https://docs.pydantic.dev/)
+If port 8000 is already in use:
+1. Change the port in `.env`: `API_PORT=8001`
+2. Or stop the process using port 8000
 
----
+## Documentation
 
-**🎊 Congratulations! You've modernized your backend to FastAPI!**
+- **Requirements**: `.kiro/specs/ngips-transformation-with-ai/requirements.md`
+- **Design**: `.kiro/specs/ngips-transformation-with-ai/design.md`
+- **Tasks**: `.kiro/specs/ngips-transformation-with-ai/tasks.md`
+- **Architecture Plan**: `NGIPS_Architecture_Plan_Extracted.md`
+- **Transformation Roadmap**: `TRANSFORMATION_ROADMAP.md`
 
-Ready to add the database layer? Check out `DATABASE_SETUP.md` next!
+## Support
+
+For questions or issues:
+1. Check the documentation files listed above
+2. Review the task list for context
+3. Check the design document for architectural decisions
+
+## License
+
+[Add your license information here]

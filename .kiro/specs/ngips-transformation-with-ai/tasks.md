@@ -30,26 +30,26 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Git commit with message: "chore: archive Flask app to legacy/ folder"
     - _Requirements: N/A_
 
-- [ ] 1. Set up FastAPI project structure
+- [x] 1. Set up FastAPI project structure
   - Create `backend/` directory with proper Python package structure
   - Initialize `app/` module with `__init__.py`, `main.py`
   - Create subdirectories: `api/`, `ml/`, `core/`, `db/`, `threat_intel/`
   - Set up virtual environment and create `requirements.txt`
   - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ] 1.1 Create FastAPI application entry point
+  - [x] 1.1 Create FastAPI application entry point
     - Write `app/main.py` with FastAPI app initialization
     - Configure CORS middleware for browser extension origin
     - Add startup event handlers for model loading
     - _Requirements: 1.1, 1.5_
 
-  - [ ] 1.2 Implement environment configuration
+  - [x] 1.2 Implement environment configuration
     - Create `app/core/config.py` with Pydantic Settings
     - Define environment variables: DATABASE_URL, CORS_ORIGINS, LOG_LEVEL, MODEL_PATHS
     - Add validation for required configuration
     - _Requirements: 1.9, 13.1, 13.2, 13.3_
 
-  - [ ] 1.3 Set up structured logging
+  - [x] 1.3 Set up structured logging
     - Create `app/core/logging.py` with JSON formatter
     - Configure log levels and rotation
     - Implement request ID tracking
