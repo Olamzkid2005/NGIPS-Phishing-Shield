@@ -1,6 +1,8 @@
-# NGIPS Phishing Detection System
+# NGIPS Phishing Shield
 
 Next-Generation Intrusion Prevention System (NGIPS) for real-time phishing detection and prevention.
+
+**Repository**: `ngips-phishing-shield`
 
 ## 🚀 Project Status
 
