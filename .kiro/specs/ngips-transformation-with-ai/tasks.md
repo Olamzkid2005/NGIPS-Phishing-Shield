@@ -14,7 +14,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
 
 ### Phase 1: Backend Foundation (Weeks 1-2)
 
-- [-] 0. Archive existing Flask application
+- [x] 0. Archive existing Flask application
   - [x] 0.1 Create `legacy/` directory in project root
     - Move existing Flask app files to `legacy/` folder
     - Move `app.py`, `Code/app.py`, templates, static files
@@ -26,7 +26,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Document that Flask app is archived and no longer maintained
     - _Requirements: 17.1_
 
-  - [-] 0.3 Commit archive changes
+  - [x] 0.3 Commit archive changes
     - Git commit with message: "chore: archive Flask app to legacy/ folder"
     - _Requirements: N/A_
 
