@@ -1,0 +1,87 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Scan {
+  id              String   @id @default(cuid())
+  url             String
+  domain          String
+  result          String
+  confidence      Float
+  threatLevel     String
+  reasons         String
+  modelVersion    String
+  processingTime  Int
+  features        String
+  timestamp       DateTime @default(now())
+
+  feedback        Feedback[]
+
+  @@index([timestamp])
+  @@index([domain])
+  @@index([result])
+  @@index([confidence])
+}
+
+model Feedback {
+  id              String   @id @default(cuid())
+  scanId          String
+  scan            Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  isFalsePositive Boolean
+  userComment     String?
+  status          String   @default("pending")
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  adminComment    String?
+  timestamp       DateTime @default(now())
+
+  @@index([scanId])
+  @@index([status])
+  @@index([timestamp])
+}
+
+model Config {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+}
+
+model Threat {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  domain      String
+  threatLevel String
+  source      String
+  blockCount  Int      @default(0)
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+
+  @@index([domain])
+  @@index([lastSeen])
+}
+
+model ModelMetric {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now())
+  modelVersion    String
+  totalPredictions Int
+  blockedCount    Int
+  allowedCount    Int
+  averageConfidence Float
+  falsePositiveCount Int
+  falseNegativeCount Int
+  accuracy        Float?
+  precision       Float?
+  recall          Float?
+  f1Score         Float?
+
+  @@index([date])
+  @@index([modelVersion])
+}

@@ -10,19 +10,16 @@ This project is currently undergoing a major architectural transformation from a
 
 1. **AI_Inspection_Engine** - FastAPI backend with ML-based phishing detection
 2. **Sensor** - Manifest V3 Chrome extension for real-time URL interception
-3. **Management_Dashboard** - Next.js 15 dashboard for monitoring and analytics
+3. **Management_Dashboard** - React dashboard for monitoring and analytics
 
 ## 📁 Repository Structure
 
 ```
-├── backend/              # FastAPI AI Inspection Engine (in development)
-├── extension/            # Browser Extension Sensor (in development)
-├── dashboard/            # Next.js Management Dashboard (in development)
+├── backend/              # FastAPI AI Inspection Engine
+├── dashboard/            # React Management Dashboard
+├── extension/            # Browser Extension Sensor (planned)
 ├── Dataset/              # Training datasets for ML models
 ├── legacy/               # ⚠️ Archived Flask application (no longer maintained)
-│   ├── Code/            # Original Flask app code
-│   ├── static/          # Flask static assets
-│   └── templates/       # Flask HTML templates
 ├── .kiro/specs/         # Implementation specifications
 └── phishingApp*.pkl     # Trained ML models (Logistic Regression, Naive Bayes)
 ```
@@ -60,7 +57,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### Dashboard (Next.js)
+### Dashboard (React + Vite)
 ```bash
 cd dashboard
 npm install
@@ -77,6 +74,7 @@ npm run dev
 
 - ✅ Real-time phishing detection via browser extension
 - ✅ ML-based URL analysis with ensemble models
+- ✅ React-based management dashboard
 - ✅ Threat intelligence integration (PhishTank, OpenPhish)
 - ✅ Modern management dashboard with analytics
 - ✅ User feedback system for continuous improvement

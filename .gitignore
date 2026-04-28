@@ -1,6 +1,12 @@
 # Models (large files)
 models/*.pkl
 models/*.pkl.*
+backend/models/*.pkl
+backend/models/*.pkl.*
+
+# Specifically exclude large model files
+backend/models/ensemble_20260416_170709.pkl
+backend/models/random_forest_20260416_170709.pkl
 
 # Dashboard
 dashboard/

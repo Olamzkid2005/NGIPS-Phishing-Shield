@@ -10,6 +10,7 @@ import logging
 from app.core.config import settings
 from app.core.log_config import setup_logging
 from app.ml.models import load_models, validate_models_on_startup, get_model_loader
+from app.api.v1.endpoints import api_router
 
 # Setup logging
 setup_logging()
@@ -65,6 +66,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(api_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/")
