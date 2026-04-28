@@ -5,7 +5,7 @@
 This design document specifies the architecture and implementation approach for transforming the Olazkid phishing detection repository from a standalone Flask web application into a comprehensive Next-Generation Intrusion Prevention System (NGIPS). The transformation involves three major components working together to provide real-time phishing protection:
 
 1. **Sensor (Browser Extension)**: A Manifest V3 Chrome extension that intercepts URL navigation events and communicates with the AI inspection engine
-2. **AI_Inspection_Engine (FastAPI Backend)**: A high-performance asynchronous backend that performs ML-based phishing detection with advanced AI capabilities
+2. **AI_Inspection_Engine (React Backend)**: A high-performance backend that performs ML-based phishing detection with advanced AI capabilities
 3. **Management_Dashboard (Next.js 15)**: A modern web application for monitoring, analytics, configuration, and feedback management
 
 The system maintains the existing ML models (Logistic Regression and Naive Bayes) while adding ensemble prediction, advanced feature extraction, threat intelligence integration, and comprehensive monitoring capabilities. The architecture follows API-first principles with clear separation of concerns, enabling each component to be developed, tested, and deployed independently.
@@ -32,7 +32,7 @@ The NGIPS follows a three-tier architecture with clear boundaries between compon
                            │ HTTPS/REST API
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│            AI_Inspection_Engine (FastAPI Backend)            │
+│            AI_Inspection_Engine (React Backend)            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
 │  │   API Layer  │  │   ML Engine  │  │  Threat Intel│     │
 │  └──────────────┘  └──────────────┘  └──────────────┘     │
@@ -73,7 +73,7 @@ The NGIPS follows a three-tier architecture with clear boundaries between compon
 
 | Component | Technology | Justification |
 |-----------|-----------|---------------|
-| **Backend Framework** | FastAPI + Uvicorn | Async support, automatic OpenAPI docs, high performance for ML inference |
+| **Backend Framework** | Express.js | Async support, automatic OpenAPI docs, high performance for ML inference |
 | **Database** | SQLite + Prisma ORM | Lightweight, file-based, zero-config, Prisma provides type-safe queries |
 | **ML Framework** | Scikit-learn | Existing models, mature ecosystem, joblib serialization |
 | **Browser Extension** | Manifest V3 | Latest Chrome extension platform, service workers for background processing |
@@ -178,11 +178,11 @@ interface ExtensionStorage {
 - **Offline Mode**: If backend unreachable, allow navigation with warning notification
 - **Rate Limiting**: Debounce rapid navigation events (e.g., redirects)
 
-### Component 2: AI_Inspection_Engine (FastAPI Backend)
+### Component 2: AI_Inspection_Engine (React Backend)
 
 **Purpose**: High-performance ML-based phishing detection with advanced AI capabilities
 
-**Technology**: FastAPI + Python 3.10+
+**Technology**: Node.js + Express
 
 **Sub-components**:
 
@@ -527,8 +527,8 @@ model ModelMetric {
 
 ### Error Handling Strategies
 
-**Backend (FastAPI)**:
-- Use FastAPI exception handlers for consistent error responses
+**Backend (React)**:
+- Use Express error handlers for consistent error responses
 - Log all errors with full context (request ID, user IP, timestamp, stack trace)
 - Return generic error messages to clients (don't expose internal details)
 - Implement circuit breaker for external services (threat intelligence APIs)
@@ -765,7 +765,7 @@ model ModelMetric {
 ## Correctness Properties
 
 **Property-based testing is not applicable to this feature.** This NGIPS transformation is primarily an infrastructure and integration project involving:
-- Service orchestration and deployment (browser extension, FastAPI backend, Next.js dashboard)
+- Service orchestration and deployment (browser extension, React backend, Next.js dashboard)
 - UI rendering and user interactions
 - Database CRUD operations with Prisma
 - Configuration management and system integration
@@ -1053,10 +1053,10 @@ The testing strategy section above provides comprehensive coverage for all syste
 
 ### Phase 1: Backend Foundation (Weeks 1-2)
 
-**Objective**: Establish FastAPI backend with ML model integration
+**Objective**: Establish React backend with ML model integration
 
 **Tasks**:
-1. Set up FastAPI project structure with proper directory organization
+1. Set up React project structure with proper directory organization
 2. Implement environment variable configuration management
 3. Load existing ML models (Logistic Regression, Naive Bayes) from .pkl files
 4. Create `/v1/analyze` endpoint with input validation
@@ -1068,8 +1068,8 @@ The testing strategy section above provides comprehensive coverage for all syste
 10. Write unit tests for API endpoints and ML pipeline
 
 **Deliverables**:
-- Working FastAPI backend with ML inference
-- API documentation (auto-generated by FastAPI)
+- Working React backend with ML inference
+- API documentation (auto-generated by Express.js)
 - Unit tests with ≥80% coverage
 - Docker container for backend
 
@@ -1082,7 +1082,7 @@ The testing strategy section above provides comprehensive coverage for all syste
 2. Define database schema (Scan, Feedback, Config, Threat, ModelMetric models)
 3. Create initial database migration
 4. Implement database seeding scripts with sample data
-5. Integrate Prisma client into FastAPI endpoints
+5. Integrate Prisma client into React endpoints
 6. Add database logging for all scan requests
 7. Implement feedback submission endpoint
 8. Create database indexes for performance
@@ -1212,9 +1212,9 @@ The testing strategy section above provides comprehensive coverage for all syste
 
 ### Technology Migration Strategy
 
-**From Flask to FastAPI**:
+**From Flask to React**:
 1. Keep Flask app in `legacy/` folder as reference
-2. Port ML model loading logic to FastAPI
+2. Port ML model loading logic to React
 3. Rewrite `/predict` endpoint as `/v1/analyze` with enhanced features
 4. Add async support for better performance
 5. Maintain backward compatibility during transition (optional)
@@ -1322,7 +1322,7 @@ The testing strategy section above provides comprehensive coverage for all syste
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
 │  │   Backend    │  │  Dashboard   │  │  Extension   │     │
-│  │  (FastAPI)   │  │  (Next.js)   │  │  (Chrome)    │     │
+│  │  (React)   │  │  (Next.js)   │  │  (Chrome)    │     │
 │  │  Port 8000   │  │  Port 3000   │  │  Loaded      │     │
 │  └──────────────┘  └──────────────┘  └──────────────┘     │
 │         │                  │                                │
@@ -1369,7 +1369,7 @@ npm run dev
 │  ┌──────▼──────┐    ┌──────▼──────┐                        │
 │  │   Backend   │    │  Dashboard  │                        │
 │  │  Container  │    │  Container  │                        │
-│  │  (FastAPI)  │    │  (Next.js)  │                        │
+│  │  (React)  │    │  (Next.js)  │                        │
 │  └──────┬──────┘    └──────┬──────┘                        │
 │         │                   │                               │
 │         └─────────┬─────────┘                               │
@@ -1540,7 +1540,7 @@ volumes:
 
 ### Security Headers
 
-**Backend (FastAPI)**:
+**Backend (React)**:
 ```python
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -1620,7 +1620,7 @@ This design document provides a comprehensive blueprint for transforming the Ola
 The implementation approach is structured in seven phases over 10 weeks, with each phase delivering working, testable software. The system prioritizes performance (<100ms API response time), privacy (minimal data collection), and user experience (fail-safe behavior, clear warnings).
 
 Key design decisions include:
-- **FastAPI** for high-performance async ML inference
+- **Express.js** for high-performance async ML inference
 - **Manifest V3** for modern browser extension platform
 - **Next.js 15** with App Router for optimal dashboard performance
 - **SQLite + Prisma** for lightweight, type-safe data persistence

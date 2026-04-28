@@ -8,14 +8,14 @@ Next-Generation Intrusion Prevention System (NGIPS) for real-time phishing detec
 
 This project is currently undergoing a major architectural transformation from a standalone Flask application to a comprehensive NGIPS with three main components:
 
-1. **AI_Inspection_Engine** - FastAPI backend with ML-based phishing detection
+1. **AI_Inspection_Engine** - React backend with ML-based phishing detection
 2. **Sensor** - Manifest V3 Chrome extension for real-time URL interception
 3. **Management_Dashboard** - React dashboard for monitoring and analytics
 
 ## 📁 Repository Structure
 
 ```
-├── backend/              # FastAPI AI Inspection Engine
+├── backend/              # React AI Inspection Engine
 ├── dashboard/            # React Management Dashboard
 ├── extension/            # Browser Extension Sensor (planned)
 ├── Dataset/              # Training datasets for ML models
@@ -30,7 +30,7 @@ The original Flask-based phishing detection application has been **archived** to
 
 - **Location**: `legacy/Code/app.py`
 - **Status**: Archived (read-only reference)
-- **Reason**: Replaced by modern NGIPS architecture with FastAPI, browser extension, and Next.js dashboard
+- **Reason**: Replaced by modern NGIPS architecture with React, browser extension, and React dashboard
 
 If you need to reference the original Flask implementation, you can find it in the `legacy/` folder. However, all new development should focus on the NGIPS components.
 
@@ -48,13 +48,11 @@ If you need to reference the original Flask implementation, you can find it in t
 - Node.js 18+
 - npm or yarn
 
-### Backend (FastAPI)
+### Backend (React)
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+npm install
+npm run dev
 ```
 
 ### Dashboard (React + Vite)

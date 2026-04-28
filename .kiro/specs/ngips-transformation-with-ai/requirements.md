@@ -2,13 +2,13 @@
 
 ## Introduction
 
-This document specifies the requirements for transforming the Olazkid phishing detection repository from a standalone Flask web application into a comprehensive Next-Generation Intrusion Prevention System (NGIPS). The system will provide real-time phishing detection and prevention through a browser-based sensor, an AI-powered inspection engine, and a modern management dashboard. The transformation includes migrating the backend to FastAPI, retraining and enhancing ML models with advanced AI capabilities, building a Manifest V3 browser extension, and creating a Next.js 15 dashboard for system management and monitoring.
+This document specifies the requirements for transforming the Olazkid phishing detection repository from a standalone Flask web application into a comprehensive Next-Generation Intrusion Prevention System (NGIPS). The system will provide real-time phishing detection and prevention through a browser-based sensor, an AI-powered inspection engine, and a modern management dashboard. The transformation includes migrating the backend to React, retraining and enhancing ML models with advanced AI capabilities, building a Manifest V3 browser extension, and creating a React dashboard for system management and monitoring.
 
 ## Glossary
 
 - **NGIPS**: Next-Generation Intrusion Prevention System - A security system that monitors network traffic and prevents malicious activities in real-time
 - **Sensor**: The browser extension component that intercepts and monitors URL navigation events
-- **AI_Inspection_Engine**: The FastAPI backend service that performs ML-based phishing detection and analysis
+- **AI_Inspection_Engine**: The React backend service that performs ML-based phishing detection and analysis
 - **Management_Dashboard**: The Next.js 15 web application for monitoring, configuration, and analytics
 - **ML_Model**: Machine Learning model trained to classify URLs as phishing or legitimate
 - **Feature_Extractor**: Component that analyzes URL structure and extracts features for ML prediction
@@ -36,13 +36,13 @@ This document specifies the requirements for transforming the Olazkid phishing d
 
 ## Requirements
 
-### Requirement 1: Backend Migration to FastAPI
+### Requirement 1: Backend Migration to React
 
-**User Story:** As a system architect, I want to migrate the Flask backend to FastAPI, so that the system can handle high-performance ML inference with asynchronous processing.
+**User Story:** As a system architect, I want to migrate the Flask backend to React, so that the system can handle high-performance ML inference with asynchronous processing.
 
 #### Acceptance Criteria
 
-1. THE AI_Inspection_Engine SHALL use FastAPI framework with Uvicorn ASGI server
+1. THE AI_Inspection_Engine SHALL use React framework with Express ASGI server
 2. THE AI_Inspection_Engine SHALL load ML models from joblib format files during startup
 3. THE AI_Inspection_Engine SHALL expose a `/v1/analyze` API_Endpoint that accepts URL strings
 4. WHEN a URL analysis request is received, THE AI_Inspection_Engine SHALL return results within 100 milliseconds

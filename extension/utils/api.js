@@ -1,8 +1,9 @@
 const API_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 3;
+const API_BASE_URL = 'http://localhost:8000';
 
 class ApiClient {
-  constructor(baseUrl) {
+  constructor(baseUrl = API_BASE_URL) {
     this.baseUrl = baseUrl;
   }
 
@@ -24,10 +25,22 @@ class ApiClient {
   }
 
   async analyzeUrl(url) {
-    return this.requestWithRetry('/analyze', {
+    return this.requestWithRetry('/v1/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })
+    });
+  }
+
+  async getStats() {
+    return this.requestWithRetry('/v1/stats', {
+      method: 'GET'
+    });
+  }
+
+  async getHealth() {
+    return this.requestWithRetry('/health', {
+      method: 'GET'
     });
   }
 
@@ -59,13 +72,17 @@ class ApiClient {
     }
   }
 
+  setBaseUrl(url) {
+    this.baseUrl = url;
+  }
+
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 
-const apiClient = new ApiClient('http://localhost:8000');
+const apiClient = new ApiClient(API_BASE_URL);
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ApiClient, apiClient, API_TIMEOUT_MS, MAX_RETRIES };
+  module.exports = { ApiClient, apiClient, API_TIMEOUT_MS, MAX_RETRIES, API_BASE_URL };
 }

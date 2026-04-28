@@ -4,7 +4,7 @@
 
 This implementation plan transforms the existing Flask-based phishing detection application into a comprehensive Next-Generation Intrusion Prevention System (NGIPS) with three main components:
 
-1. **AI_Inspection_Engine**: FastAPI backend with ML-based phishing detection
+1. **AI_Inspection_Engine**: React backend with ML-based phishing detection
 2. **Sensor**: Manifest V3 Chrome extension for real-time URL interception
 3. **Management_Dashboard**: Next.js 15 dashboard for monitoring and analytics
 
@@ -30,15 +30,15 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Git commit with message: "chore: archive Flask app to legacy/ folder"
     - _Requirements: N/A_
 
-- [x] 1. Set up FastAPI project structure
+- [x] 1. Set up React project structure
   - Create `backend/` directory with proper Python package structure
   - Initialize `app/` module with `__init__.py`, `main.py`
   - Create subdirectories: `api/`, `ml/`, `core/`, `db/`, `threat_intel/`
   - Set up virtual environment and create `requirements.txt`
   - _Requirements: 1.1, 1.2, 1.3_
 
-  - [x] 1.1 Create FastAPI application entry point
-    - Write `app/main.py` with FastAPI app initialization
+  - [x] 1.1 Create React application entry point
+    - Write `app.js` with Express app initialization
     - Configure CORS middleware for browser extension origin
     - Add startup event handlers for model loading
     - _Requirements: 1.1, 1.5_
@@ -169,7 +169,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Seed sample scans and feedback
     - _Requirements: 2.9_
 
-- [ ] 8. Integrate database into FastAPI
+- [ ] 8. Integrate database into React
   - [ ] 8.1 Create Prisma client wrapper
     - Write `app/db/client.py` with Prisma client initialization
     - Implement connection lifecycle management
@@ -550,7 +550,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
 
 - [ ] 31. Set up Docker Compose for local development
   - [ ] 31.1 Create Dockerfiles
-    - Write `backend/Dockerfile` for FastAPI
+    - Write `backend/Dockerfile` for React
     - Write `dashboard/Dockerfile` for Next.js
     - _Requirements: 16.1_
 

@@ -14,7 +14,7 @@
 
 ### What's Missing for NGIPS Architecture
 - ❌ Browser extension (Manifest V3 sensor)
-- ❌ FastAPI backend (replacing Flask)
+- ❌ React backend (replacing Flask)
 - ❌ Next.js dashboard (replacing basic HTML templates)
 - ❌ SQLite database with Prisma ORM
 - ❌ Real-time monitoring and logging
@@ -26,12 +26,12 @@
 
 ## 🎯 Transformation Strategy
 
-### Phase 1: Backend Modernization (FastAPI Core)
-**Goal:** Replace Flask with FastAPI for high-performance ML inference
+### Phase 1: Backend Modernization (React)
+**Goal:** Replace Flask with React for high-performance ML inference
 
 **Tasks:**
-1. Create FastAPI application structure
-2. Migrate ML model loading to FastAPI
+1. Create React application structure
+2. Migrate ML model loading to React
 3. Implement `/v1/analyze` endpoint for URL analysis
 4. Add feature extraction pipeline
 5. Implement ensemble model scoring
@@ -70,7 +70,7 @@
 2. Implement background service worker
 3. Add URL interception logic (webRequest API)
 4. Create blocking overlay UI
-5. Implement API communication with FastAPI
+4. Implement API communication with React
 6. Add extension popup interface
 7. Implement local caching for performance
 8. Add user settings and whitelist management
@@ -239,7 +239,7 @@
 
 ```
 ngips-phishing-detection/
-├── backend/                      # FastAPI Core Engine
+├── backend/                      # React Core Engine
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── v1/
@@ -352,8 +352,8 @@ ngips-phishing-detection/
    - Move Flask app to `legacy/` folder
    - Set up Git branches (main, develop, feature/*)
 
-2. **Set up FastAPI backend**
-   - Initialize FastAPI project
+2. **Set up React backend**
+   - Initialize React project
    - Migrate ML model loading
    - Create `/v1/analyze` endpoint
    - Test with existing models
@@ -394,9 +394,9 @@ ngips-phishing-detection/
 
 ## 🎓 Learning Resources
 
-### FastAPI
-- [FastAPI Official Docs](https://fastapi.tiangolo.com/)
-- [FastAPI Best Practices](https://github.com/zhanymkanov/fastapi-best-practices)
+### React
+- [React Official Docs](https://fastapi.tiangolo.com/)
+- [React Best Practices](https://github.com/zhanymkanov/fastapi-best-practices)
 
 ### Next.js 15
 - [Next.js Documentation](https://nextjs.org/docs)
@@ -435,11 +435,11 @@ ngips-phishing-detection/
 1. ✅ Review and approve this transformation roadmap
 2. ⬜ Set up development environment
 3. ⬜ Create new repository structure
-4. ⬜ Initialize FastAPI backend project
+4. ⬜ Initialize React backend project
 5. ⬜ Set up Prisma with SQLite
 
 ### Short Term (Next 2 Weeks)
-1. ⬜ Complete FastAPI backend with ML integration
+1. ⬜ Complete React backend with ML integration
 2. ⬜ Design and implement database schema
 3. ⬜ Start browser extension development
 4. ⬜ Create basic Next.js dashboard

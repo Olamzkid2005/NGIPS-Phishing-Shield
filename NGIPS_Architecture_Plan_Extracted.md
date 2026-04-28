@@ -22,7 +22,7 @@ A **Manifest V3 browser extension** acting as the inline inspection point. It in
 
 ---
 
-### 2. The Core: AI Inspection Engine (FastAPI)
+### 2. The Core: AI Inspection Engine (React)
 
 The centralized brain of the NGIPS. It wraps existing machine learning models into a high-performance API.
 
@@ -49,7 +49,7 @@ A modern React-based interface for system administration and log visualization.
 | Layer | Technology | Implementation Detail |
 |-------|-----------|----------------------|
 | **Frontend** | Next.js 15 | React Server Components for direct DB access |
-| **Backend** | FastAPI | Uvicorn ASGI server for high-speed ML inference |
+| **Backend** | React | Express server for high-speed ML inference |
 | **AI/ML** | Scikit-learn | Joblib-serialized models for instant loading |
 | **Storage** | SQLite + Prisma | Shared database for logs and configuration |
 | **Sensor** | Javascript | Chrome Extension Manifest V3 (Background Service Workers) |
@@ -59,7 +59,7 @@ A modern React-based interface for system administration and log visualization.
 ## Data Flow Logic
 
 1. **Intercept:** User navigates to a URL; Browser Extension catches the URL
-2. **Analysis:** URL is sent to FastAPI `/v1/analyze` endpoint
+2. **Analysis:** URL is sent to React `/v1/analyze` endpoint
 3. **Inference:** AI Core runs feature extraction and model prediction
 4. **Log:** Result is stored in `ngips.db`
 5. **Response:** Extension receives `{ "action": "block" }` or `{ "action": "allow" }`
@@ -82,7 +82,7 @@ A modern React-based interface for system administration and log visualization.
          │ HTTP Request
          ▼
 ┌─────────────────────────┐
-│  FastAPI Core Engine    │
+│  React Core Engine    │
 │  (ML Inference)         │
 └────────┬────────────────┘
          │

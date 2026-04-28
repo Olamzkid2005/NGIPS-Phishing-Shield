@@ -1,4 +1,5 @@
 const API_BASE_URL = 'http://localhost:8000';
+const API_PREFIX = '/v1';
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_BLOCKED_THRESHOLD = 0.7;
 const API_TIMEOUT_MS = 5000;
@@ -30,7 +31,7 @@ async function fetchWithTimeout(url, options, timeout = API_TIMEOUT_MS) {
 
 async function analyzeUrlWithRetry(url, retryCount = 0) {
   try {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/analyze`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}${API_PREFIX}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })
@@ -40,7 +41,16 @@ async function analyzeUrlWithRetry(url, retryCount = 0) {
       throw new Error(`API error: ${response.status}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    
+    // Parse the API response - normalize to our format
+    // The API returns: { action: 'block'|'allow', confidence: 0-1, threatLevel: 'low'|'medium'|'high'|'critical', ... }
+    return {
+      is_phishing: data.action === 'block',
+      confidence: data.confidence || 0,
+      threat_type: data.threatLevel || 'none',
+      reasons: data.reasons || []
+    };
   } catch (error) {
     if (retryCount < MAX_RETRIES - 1) {
       const delay = Math.pow(2, retryCount) * 1000;
