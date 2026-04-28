@@ -1,0 +1,10 @@
+# Models (large files)
+models/*.pkl
+models/*.pkl.*
+
+# Dashboard
+dashboard/
+
+# OS
+.DS_Store
+Thumbs.db
