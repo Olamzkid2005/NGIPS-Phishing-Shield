@@ -44,9 +44,7 @@ class Settings(BaseSettings):
     
     # ML Model Configuration
     MODEL_DIR: str = "./models"
-    LOGISTIC_REGRESSION_MODEL_PATH: str = "./phishingApp.pkl"
-    NAIVE_BAYES_MODEL_PATH: str = "./phishingApp Updated.pkl"
-    MODEL_VERSION: str = "1.0.0"
+    MODEL_VERSION: str = "20260416_170709"  # Based on training report timestamp
     
     # Feature Extraction Configuration
     MAX_URL_LENGTH: int = 2048
@@ -82,12 +80,9 @@ def validate_settings():
     """
     errors = []
     
-    # Check model files exist
-    if not os.path.exists(settings.LOGISTIC_REGRESSION_MODEL_PATH):
-        errors.append(f"Logistic Regression model not found: {settings.LOGISTIC_REGRESSION_MODEL_PATH}")
-    
-    if not os.path.exists(settings.NAIVE_BAYES_MODEL_PATH):
-        errors.append(f"Naive Bayes model not found: {settings.NAIVE_BAYES_MODEL_PATH}")
+    # Check model directory exists
+    if not os.path.exists(settings.MODEL_DIR):
+        errors.append(f"Model directory not found: {settings.MODEL_DIR}")
     
     # Check production settings
     if settings.ENVIRONMENT == "production":

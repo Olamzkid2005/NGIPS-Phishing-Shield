@@ -9,6 +9,7 @@ import logging
 
 from app.core.config import settings
 from app.core.log_config import setup_logging
+from app.ml.models import load_models, validate_models_on_startup, get_model_loader
 
 # Setup logging
 setup_logging()
@@ -25,8 +26,20 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"CORS Origins: {settings.CORS_ORIGINS}")
     
-    # TODO: Load ML models here in Task 2.1
-    logger.info("ML models will be loaded in Task 2.1")
+    # Load ML models
+    logger.info("Loading ML models...")
+    try:
+        success = load_models()
+        if not success:
+            raise RuntimeError("Failed to load ML models")
+        
+        # Validate models are functional
+        validate_models_on_startup()
+        logger.info("✓ ML models loaded and validated successfully")
+        
+    except Exception as e:
+        logger.error(f"✗ Failed to initialize ML models: {e}")
+        raise RuntimeError(f"ML model initialization failed: {e}")
     
     yield
     
@@ -70,12 +83,21 @@ async def root():
 @app.get("/health")
 async def health_check():
     """
-    Health check endpoint
+    Health check endpoint with model status
     """
+    model_loader = get_model_loader()
+    system_info = model_loader.get_system_info()
+    
     return {
         "status": "healthy",
         "service": "ngips-phishing-shield",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "models": {
+            "status": system_info["status"],
+            "count": system_info["model_count"],
+            "version": system_info["model_version"],
+            "available": system_info.get("best_models", [])
+        }
     }
 
 

@@ -70,7 +70,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Parse TLD and check for suspicious keywords
     - _Requirements: 4.3, 4.4, 4.10_
 
-  - [ ]* 2.3 Write unit tests for feature extraction
+  - [ ] 2.3 Write unit tests for feature extraction
     - Test with various URL patterns (short, long, international domains)
     - Test edge cases (empty, malformed URLs)
     - Verify feature values match expected ranges
@@ -90,7 +90,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Add timing instrumentation
     - _Requirements: 1.4, 4.1, 4.2_
 
-  - [ ]* 3.3 Write unit tests for ensemble logic
+  - [ ] 3.3 Write unit tests for ensemble logic
     - Test with mock model predictions
     - Verify confidence calculation
     - Test edge cases (all models agree, all disagree)
@@ -115,7 +115,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Return performance statistics (uptime, request count, response times)
     - _Requirements: 1.7, 14.1, 14.2, 14.4_
 
-  - [ ]* 4.4 Write API endpoint tests
+  - [ ] 4.4 Write API endpoint tests
     - Test `/v1/analyze` with valid and invalid inputs
     - Test error responses (400, 429, 500, 503)
     - Verify response schema matches specification
@@ -188,7 +188,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Store feedback with timestamp
     - _Requirements: 2.3, 10.1_
 
-  - [ ]* 8.4 Write database integration tests
+  - [ ] 8.4 Write database integration tests
     - Test scan creation and retrieval
     - Test feedback submission
     - Test configuration updates
@@ -241,7 +241,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Provide add/remove whitelist functions
     - _Requirements: 5.8, 5.12_
 
-  - [ ]* 12.4 Write unit tests for service worker logic
+  - [ ] 12.4 Write unit tests for service worker logic
     - Test URL filtering logic
     - Test cache hit/miss scenarios
     - Test whitelist lookup
@@ -260,7 +260,7 @@ The implementation follows a 7-phase approach over 10 weeks, building incrementa
     - Log errors to console
     - _Requirements: 5.10, 5.11_
 
-  - [ ]* 13.3 Write unit tests for API client
+  - [ ] 13.3 Write unit tests for API client
     - Test timeout behavior
     - Test retry logic
     - Test error handling
