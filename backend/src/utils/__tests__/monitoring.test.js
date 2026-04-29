@@ -182,7 +182,8 @@ describe('ModelMonitor', () => {
     monitor.checkDrift();
 
     const stats = monitor.getStats();
-    // There should be at most 1 drift alert per drift event, not 3
-    // This test documents the current buggy behavior
+    const driftAlerts = stats.recentAlerts.filter(a => a.type === 'DRIFT_DETECTED');
+    // After fix, should have at most 1 alert per drift event
+    expect(driftAlerts.length).toBeLessThanOrEqual(1);
   });
 });

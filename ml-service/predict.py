@@ -91,7 +91,7 @@ def predict(url, models, threshold=0.5):
             phishing_prob = float(proba[bad_idx])
             results[name] = round(phishing_prob, 6)
         except Exception as e:
-            results[name] = {'error': 'Prediction failed'}
+            results[name] = {'error': f'Prediction failed: {str(e)}'}
 
     valid_results = {k: v for k, v in results.items() if not isinstance(v, dict)}
 
@@ -142,7 +142,10 @@ def main():
         print(json.dumps({'success': False, 'error': 'Invalid URL'}), flush=True)
         sys.exit(1)
 
-    threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
+    try:
+        threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
+    except ValueError:
+        threshold = 0.5
 
     try:
         models = load_models()
@@ -154,7 +157,8 @@ def main():
         print(json.dumps(result), flush=True)
         sys.exit(0)
     except Exception as e:
-        print(json.dumps({'success': False, 'error': 'Internal error'}), flush=True)
+        import traceback
+        print(json.dumps({'success': False, 'error': 'Internal error', 'details': str(e)}), flush=True)
         sys.exit(1)
 
 

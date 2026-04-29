@@ -26,7 +26,7 @@ async function exportTrainingData(scanHistory) {
   rows.push('url,confidence,is_phishing,feedback_correct,timestamp');
 
   for (const scan of scanHistory.values()) {
-    const url = `"${(scan.url || '').replace(/"/g, '""')}"`;
+    const url = `"${(scan.url || '').replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, '')}"`;
     const confidence = scan.confidence ?? 0;
     const isPhishing = scan.action === 'block' ? 1 : 0;
     const feedbackCorrect = scan.feedbackCorrect ?? '';

@@ -16,7 +16,13 @@ export async function getAllFeedbackHandler(req, res) {
     status
   });
   
-  return res.json(result);
+  return res.json({
+    data: result.data.map(f => ({
+      ...f,
+      timestamp: f.createdAt || f.timestamp
+    })),
+    pagination: result.pagination
+  });
 }
 
 /**
@@ -39,7 +45,7 @@ export async function updateFeedbackHandler(req, res) {
   
   return res.json({
     id: feedback.id,
-    url: feedback.scanId,
+    scanId: feedback.scanId,
     isFalsePositive: feedback.isFalsePositive,
     userComment: feedback.userComment,
     status: feedback.status,

@@ -1,9 +1,8 @@
+process.env.NODE_ENV = 'test';
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
 import { scanHistory } from '../analyze.js';
-
-process.env.NODE_ENV = 'test';
 
 describe('Analyze API', () => {
   beforeEach(() => {

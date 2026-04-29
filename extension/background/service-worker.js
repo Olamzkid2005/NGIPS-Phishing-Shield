@@ -103,7 +103,7 @@ async function checkUrlSafety(url) {
     return result;
   } catch (error) {
     console.error('URL analysis failed:', error);
-    return { is_phishing: true, confidence: 1.0, threat_type: 'error', error: error.message };
+    return { is_phishing: false, confidence: 0, threat_type: 'unknown', error: error.message };
   }
 }
 
@@ -192,7 +192,8 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
       threatType: result.threat_type,
       confidence: result.confidence,
       threatLevel: result.threat_level,
-      redFlags: result.reasons
+      redFlags: result.reasons,
+      refId: 'SEC-PH-' + Math.random().toString(36).substr(2, 5).toUpperCase()
     };
     await chrome.storage.session.set({ [`block_${details.tabId}`]: blockData });
     chrome.tabs.update(details.tabId, { url: chrome.runtime.getURL('blocked.html') });
@@ -241,13 +242,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     fetchWithTimeout(`${API_BASE_URL}${API_PREFIX}/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scanId: message.scanId, isFalsePositive: true, userComment: message.comment })
+      body: JSON.stringify({
+        scanId: message.scanId || message.url || 'unknown',
+        isFalsePositive: true,
+        userComment: message.comment || message.threatType || 'User reported'
+      })
     }).then(() => sendResponse({ success: true }))
       .catch(() => sendResponse({ success: false }));
     return true;
   }
 
   if (message.type === 'GET_TAB_STATUS') {
+    const tabId = sender.tab?.id;
+    if (tabId) {
+      chrome.storage.session.get([`block_${tabId}`], (result) => {
+        const data = result[`block_${tabId}`];
+        sendResponse({ blocked: !!data, data });
+      });
+      return true;
+    }
     sendResponse({ blocked: false });
     return false;
   }

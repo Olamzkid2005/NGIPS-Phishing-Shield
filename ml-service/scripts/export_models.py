@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import numpy as np
 import joblib
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.snowball import SnowballStemmer

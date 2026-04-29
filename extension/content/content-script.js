@@ -86,6 +86,8 @@ function injectOverlay(data) {
     chrome.runtime.sendMessage({
       type: 'REPORT_FALSE_POSITIVE',
       url: data.url,
+      scanId: data.scanId || data.url,
+      comment: 'User reported false positive',
       threatType: data.threatType,
       confidence: data.confidence
     }, (response) => {

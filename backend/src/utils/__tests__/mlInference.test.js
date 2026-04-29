@@ -84,6 +84,13 @@ describe('ML Inference', () => {
     }
   }, 60000);
 
+  it('should load ML models successfully', async () => {
+    const loaded = await loadModels();
+    expect(loaded).toBe(true);
+    const status = getMLStatus();
+    expect(status.loaded).toBe(true);
+  });
+
   it('should return confidence between 0 and 1', async () => {
     const loaded = await loadModels();
     if (loaded) {

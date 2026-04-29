@@ -22,7 +22,7 @@ const Analytics: React.FC = () => {
       setLoading(true);
       const [statsData, trendsData, domainsData, threatsData] = await Promise.all([
         apiService.getStatistics(),
-        apiService.getAnalyticsTrends(),
+        apiService.getAnalyticsTrends(period),
         apiService.getTopDomains(),
         apiService.getThreatClassification(),
       ]);
@@ -132,8 +132,9 @@ const Analytics: React.FC = () => {
               <div className="p-6">
                 {trends?.dailyData && trends.dailyData.length > 0 ? (
                   <div className="space-y-2">
-                    {trends.dailyData.map((d) => {
+                    {(() => {
                       const maxTotal = Math.max(...trends.dailyData.map((x) => x.total), 1);
+                      return trends.dailyData.map((d) => {
                       return (
                         <div key={d.date} className="flex items-center gap-3">
                           <span className="w-16 text-xs text-gray-500 dark:text-gray-400">
@@ -156,7 +157,8 @@ const Analytics: React.FC = () => {
                           <span className="w-12 text-right text-xs font-medium text-gray-700 dark:text-gray-300">{d.total}</span>
                         </div>
                       );
-                    })}
+                    });
+                    })()}
                     <div className="flex items-center gap-4 pt-2">
                       <div className="flex items-center gap-1">
                         <div className="h-3 w-3 rounded bg-primary-400" />

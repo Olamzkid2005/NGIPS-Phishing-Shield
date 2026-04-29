@@ -23,7 +23,7 @@ export async function hashPassword(password) {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(16);
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err);
+      if (err) return reject(err);
       resolve(salt.toString('hex') + ':' + derivedKey.toString('hex'));
     });
   });
@@ -36,8 +36,10 @@ export async function comparePassword(password, hash) {
   return new Promise((resolve, reject) => {
     const [salt, key] = hash.split(':');
     crypto.scrypt(password, Buffer.from(salt, 'hex'), 64, (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(key === derivedKey.toString('hex'));
+      if (err) return reject(err);
+      const keyBuf = Buffer.from(key, 'hex');
+      if (keyBuf.length !== derivedKey.length) return resolve(false);
+      resolve(crypto.timingSafeEqual(keyBuf, derivedKey));
     });
   });
 }
@@ -142,6 +144,26 @@ export function revokeRefreshToken(token) {
     // TODO: Update in database:
     // await prisma.refreshToken.update({ where: { token }, data: { revoked: true } });
   }
+}
+
+/**
+ * Store a refresh token with associated metadata
+ */
+export function storeRefreshToken(token, metadata = {}) {
+  refreshTokens.set(token, {
+    token,
+    userId: metadata.userId,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    createdAt: new Date().toISOString(),
+    revoked: false
+  });
+}
+
+/**
+ * Delete a refresh token (used during rotation)
+ */
+export function deleteRefreshToken(token) {
+  refreshTokens.delete(token);
 }
 
 /**
@@ -256,6 +278,8 @@ export default {
   generateRefreshToken,
   getRefreshToken,
   revokeRefreshToken,
+  storeRefreshToken,
+  deleteRefreshToken,
   createUser,
   findUserByEmail,
   authMiddleware,

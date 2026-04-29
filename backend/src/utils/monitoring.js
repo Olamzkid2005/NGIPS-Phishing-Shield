@@ -65,12 +65,15 @@ class ModelMonitor {
     const result = this.calculateDrift();
 
     if (result.drifted) {
-      this.alerts.push({
-        type: 'DRIFT_DETECTED',
-        psi: result.psi,
-        timestamp: Date.now(),
-        message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
-      });
+      const lastAlert = this.alerts[this.alerts.length - 1];
+      if (!lastAlert || lastAlert.type !== 'DRIFT_DETECTED' || Date.now() - lastAlert.timestamp > 300000) {
+        this.alerts.push({
+          type: 'DRIFT_DETECTED',
+          psi: result.psi,
+          timestamp: Date.now(),
+          message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
+        });
+      }
       if (this.alerts.length > 1000) {
         this.alerts = this.alerts.slice(-500);
       }

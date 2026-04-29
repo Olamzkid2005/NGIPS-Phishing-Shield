@@ -10,21 +10,20 @@ import {
   generateAccessToken, 
   verifyAccessToken,
   generateRefreshToken,
+  getRefreshToken,
+  deleteRefreshToken,
+  storeRefreshToken,
   revokeRefreshToken,
   findUserByEmail,
   createUser
 } from '../utils/auth.js';
-
-// In-memory user store
-const userStore = new Map();
 
 /**
  * Initialize demo user if not exists
  */
 (async () => {
   try {
-    const demoUser = await createUser('demo@example.com', 'demo123', 'user');
-    userStore.set(demoUser.id, demoUser);
+    await createUser('demo@example.com', 'demo123', 'user');
   } catch (e) {
     // User may already exist
   }
@@ -92,24 +91,23 @@ export async function refreshHandler(req, res) {
   const { refreshToken } = req.body;
   
   if (!refreshToken) {
-    return res.status(400).json({
-      error: {
-        code: 'MISSING_REFRESH_TOKEN',
-        message: 'Refresh token is required'
-      }
-    });
+    return res.status(400).json({ error: { code: 'MISSING_TOKEN', message: 'Refresh token required' } });
   }
   
-  // For now, return a new access token (simplified)
-  const newAccessToken = generateAccessToken({
-    sub: 'user',
-    role: 'user'
-  });
+  const stored = getRefreshToken(refreshToken);
+  if (!stored) {
+    return res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' } });
+  }
   
-  return res.json({
-    accessToken: newAccessToken,
-    expiresIn: 900
-  });
+  // Remove used token (rotation)
+  deleteRefreshToken(refreshToken);
+  
+  const newAccessToken = generateAccessToken({ sub: stored.userId || 'user', role: 'user' });
+  const newRefreshToken = generateRefreshToken({ sub: stored.userId || 'user' });
+  
+  storeRefreshToken(newRefreshToken, { userId: stored.userId || 'user' });
+  
+  return res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
 }
 
 /**

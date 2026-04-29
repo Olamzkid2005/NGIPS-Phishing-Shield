@@ -152,7 +152,7 @@ const Dashboard: React.FC = () => {
                 {health?.models?.status === 'loaded' ? 'Active' : 'Unknown'}
               </p>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                v{health?.models?.version || 'N/A'} • {health?.models?.count || 0} models
+                v{health?.models?.version || 'N/A'} • {health?.models?.method || 'unknown'}
               </p>
             </div>
             <div className="rounded-lg bg-safe-100 p-2 dark:bg-safe-900/30">
@@ -312,9 +312,9 @@ const Dashboard: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Loaded Models</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Detection Method</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {health?.models?.count || 0}
+                  {health?.models?.method || 'unknown'}
                 </span>
               </div>
               <div className="flex items-center justify-between">

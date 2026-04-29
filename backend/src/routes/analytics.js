@@ -8,19 +8,30 @@ import { scanHistory } from './analyze.js';
  * GET /v1/analytics/trends - Returns chart data for analytics page
  */
 export async function getTrendsHandler(req, res) {
+  const period = req.query.period || '7d';
   const scans = Array.from(scanHistory.values());
+  
+  let days = 7;
+  if (period === '24h') days = 1;
+  else if (period === '30d') days = 30;
+  else if (period === 'all') days = 365;
   
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const weekMs = 7 * dayMs;
   
+  const filteredScans = scans.filter(s => {
+    const ts = new Date(s.timestamp).getTime();
+    return now - ts < days * dayMs;
+  });
+  
   const dailyData = [];
   const weeklyData = [];
   
-  for (let i = 6; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const dayStart = now - i * dayMs;
     const dayEnd = dayStart + dayMs;
-    const dayScans = scans.filter(s => {
+    const dayScans = filteredScans.filter(s => {
       const ts = new Date(s.timestamp).getTime();
       return ts >= dayStart && ts < dayEnd;
     });
@@ -32,16 +43,17 @@ export async function getTrendsHandler(req, res) {
     });
   }
   
-  for (let i = 3; i >= 0; i--) {
+  const weeksToShow = Math.ceil(days / 7);
+  for (let i = weeksToShow - 1; i >= 0; i--) {
     const weekStart = now - i * weekMs;
     const weekEnd = weekStart + weekMs;
-    const weekScans = scans.filter(s => {
+    const weekScans = filteredScans.filter(s => {
       const ts = new Date(s.timestamp).getTime();
       return ts >= weekStart && ts < weekEnd;
     });
     
     weeklyData.push({
-      date: `Week ${4 - i}`,
+      date: `Week ${weeksToShow - i}`,
       total: weekScans.length,
       blocked: weekScans.filter(s => s.action === 'block').length
     });

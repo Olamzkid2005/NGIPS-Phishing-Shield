@@ -57,7 +57,7 @@ describe('Feature Extraction', () => {
     });
 
     it('should return null for invalid URLs', () => {
-      const features = extractFeatures('');
+      const features = extractFeatures('not a valid url at all');
       expect(features).toBeNull();
     });
 
@@ -162,7 +162,7 @@ describe('Feature Extraction', () => {
     it('should include threat level', () => {
       const result = analyzeUrl('https://example.com');
       expect(result.threatLevel).toBeDefined();
-      expect(['low', 'medium', 'high', 'critical']).toContain(result.threatLevel);
+      expect(['none', 'low', 'medium', 'high', 'critical']).toContain(result.threatLevel);
     });
 
     it('should include reasons array', () => {

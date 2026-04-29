@@ -8,7 +8,6 @@ const Settings: React.FC = () => {
 
   // Settings state
   const [theme, setTheme] = useState<DashboardSettings['theme']>('system');
-  const [apiBaseUrl, setApiBaseUrl] = useState('http://localhost:8000');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(30);
   const [notifications, setNotifications] = useState({
@@ -34,7 +33,6 @@ const Settings: React.FC = () => {
       try {
         const parsed = JSON.parse(saved);
         if (parsed.theme) setTheme(parsed.theme);
-        if (parsed.apiBaseUrl) setApiBaseUrl(parsed.apiBaseUrl);
         if (parsed.autoRefresh !== undefined) setAutoRefresh(parsed.autoRefresh);
         if (parsed.refreshInterval) setRefreshInterval(parsed.refreshInterval);
         if (parsed.notifications) setNotifications(parsed.notifications);
@@ -43,13 +41,13 @@ const Settings: React.FC = () => {
   }, []);
 
   function saveSettings() {
-    const settings = { theme, apiBaseUrl, autoRefresh, refreshInterval, notifications };
+    const settings = { theme, autoRefresh, refreshInterval, notifications };
     localStorage.setItem('ngips-dashboard-settings', JSON.stringify(settings));
   }
 
   useEffect(() => {
     saveSettings();
-  }, [theme, apiBaseUrl, autoRefresh, refreshInterval, notifications]);
+  }, [theme, autoRefresh, refreshInterval, notifications]);
 
   async function checkHealth() {
     try {
@@ -65,16 +63,29 @@ const Settings: React.FC = () => {
 
   async function handleRecalibrate() {
     setRecalibrating(true);
-    // Simulate recalibration
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setRecalibrating(false);
+    try {
+      await apiService.post('/v1/admin/calibrate');
+      alert('Baseline calibrated');
+    } catch (error) {
+      console.error('Calibration failed:', error);
+      alert('Calibration failed');
+    } finally {
+      setRecalibrating(false);
+    }
   }
 
   async function handleRetrain() {
+    if (!window.confirm('Trigger model retraining?')) return;
     setRetraining(true);
-    // Simulate retraining trigger
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setRetraining(false);
+    try {
+      await apiService.post('/v1/admin/retrain');
+      alert('Retraining started');
+    } catch (error) {
+      console.error('Retraining failed:', error);
+      alert('Retraining failed');
+    } finally {
+      setRetraining(false);
+    }
   }
 
   async function handleExportCsv() {
@@ -91,7 +102,10 @@ const Settings: React.FC = () => {
         s.modelVersion,
         s.timestamp,
       ]);
-      const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const csv = [
+        headers.join(','),
+        ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -109,8 +123,23 @@ const Settings: React.FC = () => {
   async function handleClearHistory() {
     if (!window.confirm('Are you sure you want to clear all scan history? This action cannot be undone.')) return;
     setClearing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setClearing(false);
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_BASE_URL}/v1/admin/clear-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        alert('History cleared successfully');
+      } else {
+        alert('Failed to clear history');
+      }
+    } catch (error) {
+      console.error('Clear history failed:', error);
+      alert('Failed to clear history');
+    } finally {
+      setClearing(false);
+    }
   }
 
   const themeOptions = [
@@ -157,38 +186,28 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* API Base URL */}
+      {/* Health Status */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
             <span className="material-symbols-outlined text-primary-600">api</span>
-            API Configuration
+            API Health
           </h2>
         </div>
         <div className="p-6 space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">API Base URL</label>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={apiBaseUrl}
-                onChange={(e) => setApiBaseUrl(e.target.value)}
-                placeholder="http://localhost:8000"
-                className="flex h-10 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              />
-              <button
-                onClick={checkHealth}
-                disabled={checkingHealth}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
-              >
-                {checkingHealth ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                ) : (
-                  <span className="material-symbols-outlined text-base">health_and_safety</span>
-                )}
-                Check Health
-              </button>
-            </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={checkHealth}
+              disabled={checkingHealth}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+            >
+              {checkingHealth ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+              ) : (
+                <span className="material-symbols-outlined text-base">health_and_safety</span>
+              )}
+              Check Health
+            </button>
           </div>
           {health && (
             <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
@@ -280,8 +299,8 @@ const Settings: React.FC = () => {
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{health.models.version}</p>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Models Loaded</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{health.models.count}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Method</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{health.models.method}</p>
               </div>
             </div>
           )}

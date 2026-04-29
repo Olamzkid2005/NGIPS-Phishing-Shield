@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createRequire } from 'module';
 import { timingSafeEqual } from 'crypto';
+import { errorHandler } from './utils/errors.js';
 
 // Import routes
 import { analyzeUrlHandler, getScansHandler, getScanByIdHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
@@ -17,6 +18,9 @@ import { getTrendsHandler, getTopDomainsHandler, getThreatClassificationHandler 
 import { getAllFeedbackHandler, updateFeedbackHandler } from './routes/feedback.js';
 import { getSettingsHandler, updateSettingsHandler } from './routes/settings.js';
 import { loginHandler, refreshHandler, logoutHandler, meHandler } from './routes/auth.js';
+
+// Import auth middleware
+import { authMiddleware } from './utils/auth.js';
 
 // Import ML inference
 import { loadModels, getMLStatus } from './utils/mlInference.js';
@@ -35,7 +39,12 @@ const PORT = process.env.PORT || 8000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['chrome-extension://*', 'http://localhost:3000', 'http://localhost:3001'],
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (origin.startsWith('chrome-extension://')) return callback(null, true);
+    if (origin.includes('localhost')) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -44,7 +53,7 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute
+  max: process.env.NODE_ENV === 'test' ? 10000 : 100, // 100 requests per minute
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',
@@ -119,23 +128,26 @@ app.get('/', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes (public)
 app.post('/v1/analyze', (req, res, next) => analyzeUrlHandler(req, res).catch(next));
-app.get('/v1/scans', (req, res, next) => getScansHandler(req, res).catch(next));
-app.get('/v1/scans/:id', (req, res, next) => getScanByIdHandler(req, res).catch(next));
 app.post('/v1/feedback', (req, res, next) => submitFeedbackHandler(req, res).catch(next));
 app.get('/v1/stats', (req, res, next) => getStatsHandler(req, res).catch(next));
 
+// Scans routes (public - extension needs access)
+app.get('/v1/scans', (req, res, next) => getScansHandler(req, res).catch(next));
+app.get('/v1/scans/:id', (req, res, next) => getScanByIdHandler(req, res).catch(next));
+
 // Feedback admin routes
-app.get('/v1/feedback', (req, res, next) => getAllFeedbackHandler(req, res).catch(next));
-app.patch('/v1/feedback/:id/status', (req, res, next) => updateFeedbackHandler(req, res).catch(next));
+app.get('/v1/feedback', adminAuth, (req, res, next) => getAllFeedbackHandler(req, res).catch(next));
+app.patch('/v1/feedback/:id/status', adminAuth, (req, res, next) => updateFeedbackHandler(req, res).catch(next));
 
 // Analytics routes
 app.get('/v1/analytics/trends', (req, res, next) => getTrendsHandler(req, res).catch(next));
 app.get('/v1/analytics/top-domains', (req, res, next) => getTopDomainsHandler(req, res).catch(next));
 app.get('/v1/analytics/threats', (req, res, next) => getThreatClassificationHandler(req, res).catch(next));
 
-// Settings routes
+// Settings routes (protected)
+app.use('/v1/settings', authMiddleware);
 app.get('/v1/settings', (req, res, next) => getSettingsHandler(req, res).catch(next));
 app.patch('/v1/settings', (req, res, next) => updateSettingsHandler(req, res).catch(next));
 
@@ -174,6 +186,12 @@ app.post('/v1/admin/calibrate', adminAuth, (req, res) => {
   });
 });
 
+// POST /v1/admin/clear-history - Clear all scan history
+app.post('/v1/admin/clear-history', adminAuth, (req, res) => {
+  scanHistory.clear();
+  return res.json({ message: 'History cleared', timestamp: new Date().toISOString() });
+});
+
 // GET /v1/admin/alerts - Get recent monitoring alerts
 app.get('/v1/admin/alerts', adminAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
@@ -201,15 +219,7 @@ app.post('/v1/admin/evaluate', adminAuth, async (req, res) => {
 });
 
 // Error handling
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred'
-    }
-  });
-});
+app.use(errorHandler);
 
 // 404 handler
 app.use((req, res) => {

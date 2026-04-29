@@ -91,8 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function checkCurrentPageThreat() {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.url) return;
-      
+      if (!tab?.url || /^(chrome|about|edge|brave|chrome-extension):/.test(tab.url)) return;
+
       const response = await chrome.runtime.sendMessage({ type: 'CHECK_URL', url: tab.url });
       updateThreatDisplay(response);
     } catch (error) {
@@ -141,15 +141,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load ML status
   async function loadMLStatus() {
     try {
-      const stats = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
-      if (elements.mlStatus) {
-        elements.mlStatus.textContent = 'Active';
-        elements.mlDot.className = 'w-2 h-2 rounded-full bg-green-500';
+      const response = await fetch('http://localhost:8000/health');
+      if (response.ok) {
+        const data = await response.json();
+        if (elements.mlStatus) {
+          elements.mlStatus.textContent = data.models?.status === 'loaded' ? 'Active' : 'Unavailable';
+          elements.mlDot.className = `w-2 h-2 rounded-full ${data.models?.status === 'loaded' ? 'bg-green-500' : 'bg-yellow-500'}`;
+        }
+      } else {
+        throw new Error('Health check failed');
       }
     } catch (error) {
       if (elements.mlStatus) {
-        elements.mlStatus.textContent = 'Inactive';
-        elements.mlDot.className = 'w-2 h-2 rounded-full bg-slate-400';
+        elements.mlStatus.textContent = 'Offline';
+        elements.mlDot.className = 'w-2 h-2 rounded-full bg-red-500';
       }
     }
   }

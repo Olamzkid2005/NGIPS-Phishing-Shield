@@ -6,12 +6,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { analyzeUrlEnsemble } from '../utils/featureExtraction.js';
 import { monitor } from '../utils/monitoring.js';
+import { createFeedback } from '../utils/feedbackRepository.js';
 
 // In-memory scan history (replace with database in production)
 export const scanHistory = new Map();
-
-// In-memory feedback store
-const feedbackStore = new Map();
 
 /**
  * Store scan result
@@ -197,20 +195,14 @@ export async function submitFeedbackHandler(req, res) {
     });
   }
 
-  const feedback = {
-    id: `fb_${uuidv4().slice(0, 8)}`,
+  const feedback = await createFeedback({
     scanId,
     isFalsePositive: isFalsePositive || false,
-    userComment: userComment || null,
-    status: 'pending',
-    timestamp: new Date().toISOString()
-  };
+    userComment: userComment || null
+  });
 
   // Persist feedback on the scan
   scan.feedback = feedback;
-
-  // Store in separate feedback store
-  feedbackStore.set(feedback.id, feedback);
 
   scan.feedbackCorrect = isFalsePositive ? 0 : 1;
   monitor.alerts.push({

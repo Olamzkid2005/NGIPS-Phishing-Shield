@@ -3,7 +3,9 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data:;">
     <title>Blocked | NGIPS Phishing Shield</title>
+    <!-- TODO: Bundle Tailwind CSS locally instead of using CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -169,7 +171,7 @@
                         document.getElementById('confidence-bar').style.width = confidence + '%';
 
                         // Update reference ID
-                        document.getElementById('ref-id').textContent = 'SEC-PH-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+                        document.getElementById('ref-id').textContent = data.refId || 'SEC-PH-' + Math.random().toString(36).substr(2, 5).toUpperCase();
 
                         // Update red flags
                         const container = document.getElementById('red-flags-container');
@@ -195,11 +197,15 @@
                     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                         const tabId = tabs[0]?.id;
                         if (tabId) {
-                            chrome.storage.session.remove(`block_${tabId}`);
+                            chrome.storage.session.get([`block_${tabId}`], (result) => {
+                                const data = result[`block_${tabId}`];
+                                if (data?.url) {
+                                    chrome.tabs.update(tabId, { url: data.url });
+                                }
+                            });
                         }
                     });
                 }
-                window.history.back();
             });
         });
 

@@ -17,13 +17,13 @@ const Feedback: React.FC = () => {
 
   useEffect(() => {
     loadFeedback();
-  }, []);
+  }, [statusFilter]);
 
   async function loadFeedback(page: number = 1) {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getFeedback(page, 20);
+      const data = await apiService.getFeedback(page, 20, statusFilter);
       setFeedback(data.data);
       setPagination(data.pagination);
     } catch (err) {
@@ -142,6 +142,7 @@ const Feedback: React.FC = () => {
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {stats.accuracyRate.toFixed(1)}%
               </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Based on current page</p>
             </div>
           </div>
         </div>
@@ -153,6 +154,7 @@ const Feedback: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">False Positives</p>
               <p className="text-2xl font-bold text-danger-600">{stats.falsePositives}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">On current page</p>
             </div>
           </div>
         </div>
@@ -164,6 +166,7 @@ const Feedback: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Pending Review</p>
               <p className="text-2xl font-bold text-warning-600">{stats.pending}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">On current page</p>
             </div>
           </div>
         </div>

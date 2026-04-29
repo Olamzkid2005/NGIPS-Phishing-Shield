@@ -81,16 +81,33 @@ export async function predictPhishing(url) {
 
     let stdout = '';
     let stderr = '';
+    let resolved = false;
 
     proc.stdout.on('data', (data) => { stdout += data.toString(); });
     proc.stderr.on('data', (data) => { stderr += data.toString(); });
 
     proc.on('error', (error) => {
-      console.error('[ML] Prediction error:', error.message);
-      resolve(null);
+      if (!resolved) {
+        resolved = true;
+        console.error('[ML] Prediction error:', error.message);
+        resolve(null);
+      }
     });
 
+    const timeout = setTimeout(() => {
+      proc.kill('SIGTERM');
+      if (!resolved) {
+        resolved = true;
+        console.error('[ML] Prediction timed out for URL:', url);
+        resolve(null);
+      }
+    }, 30000);
+
     proc.on('close', (code) => {
+      clearTimeout(timeout);
+      if (resolved) return;
+      resolved = true;
+
       if (stdout && stdout.trim()) {
         try {
           const result = JSON.parse(stdout.trim());
@@ -125,14 +142,6 @@ export async function predictPhishing(url) {
 
       resolve(null);
     });
-
-    const timeout = setTimeout(() => {
-      proc.kill('SIGTERM');
-      console.error('[ML] Prediction timed out for URL:', url);
-      resolve(null);
-    }, 30000);
-
-    proc.on('close', () => clearTimeout(timeout));
   });
 }
 
