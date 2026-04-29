@@ -6,6 +6,7 @@
 import { monitor } from '../utils/monitoring.js';
 import { getMLStatus } from '../utils/mlInference.js';
 import { scanHistory } from './analyze.js';
+import { getFeedbackStats } from '../utils/feedbackRepository.js';
 
 /**
  * GET /v1/stats - Get aggregate statistics
@@ -15,6 +16,7 @@ export async function getStatsHandler(req, res) {
   const mlStatus = getMLStatus();
 
   const scans = Array.from(scanHistory.values());
+  const feedbackStats = await getFeedbackStats();
 
   return res.json({
     totalScans: monitorStats.totalPredictions,
@@ -41,9 +43,9 @@ export async function getStatsHandler(req, res) {
       const ts = new Date(s.timestamp).getTime();
       return Date.now() - ts < 24 * 60 * 60 * 1000;
     }).length,
-    totalFeedback: 0,
-    falsePositiveReports: 0,
-    falsePositiveRate: 0,
+    totalFeedback: feedbackStats.total,
+    falsePositiveReports: feedbackStats.falsePositives,
+    falsePositiveRate: feedbackStats.falsePositiveRate,
     timestamp: new Date().toISOString()
   });
 }

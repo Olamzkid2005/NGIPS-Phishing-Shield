@@ -42,8 +42,8 @@ function injectOverlay(data) {
           `).join('')}
         </ul>
       </div>
-      <div class="threat-level-badge ${data.threatLevel || 'high'}">
-        ${(data.threatLevel || 'high').toUpperCase()} THREAT
+      <div class="threat-level-badge ${['low', 'medium', 'high', 'critical'].includes(data.threatLevel) ? data.threatLevel : 'high'}">
+        ${(['low', 'medium', 'high', 'critical'].includes(data.threatLevel) ? data.threatLevel : 'high').toUpperCase()} THREAT
       </div>
       <div class="confidence-section">
         <div class="confidence-label">ML Confidence: ${((data.mlConfidence || data.confidence || 0) * 100).toFixed(1)}%</div>
@@ -71,13 +71,7 @@ function injectOverlay(data) {
 
   document.getElementById('proceed-anyway-btn').addEventListener('click', () => {
     const domain = new URL(data.url).hostname;
-    chrome.storage.local.get(['acceptedDomains'], (result) => {
-      const accepted = result.acceptedDomains || [];
-      if (!accepted.includes(domain)) {
-        accepted.push(domain);
-        chrome.storage.local.set({ acceptedDomains: accepted });
-      }
-    });
+    chrome.runtime.sendMessage({ type: 'ADD_TO_WHITELIST', domain });
     overlay.remove();
     overlayInjected = false;
   });

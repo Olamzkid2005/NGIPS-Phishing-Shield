@@ -42,7 +42,7 @@ app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
     if (origin.startsWith('chrome-extension://')) return callback(null, true);
-    if (origin.includes('localhost')) return callback(null, true);
+    if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
@@ -130,20 +130,16 @@ app.get('/', (req, res) => {
 
 // Extension auth bypass (check for extension origin, test env, or API key)
 function extensionOrAuth(req, res, next) {
-  // Allow in test environment
-  if (process.env.NODE_ENV === 'test') {
-    return next();
-  }
+  if (process.env.NODE_ENV === 'test') return next();
   const origin = req.headers.origin || '';
-  if (origin.startsWith('chrome-extension://')) {
-    return next();
-  }
+  const extensionId = process.env.EXTENSION_ID || '';
+  if (extensionId && origin === `chrome-extension://${extensionId}`) return next();
   return authMiddleware(req, res, next);
 }
 
 // API Routes (public)
-app.post('/v1/analyze', (req, res, next) => analyzeUrlHandler(req, res).catch(next));
-app.post('/v1/feedback', (req, res, next) => submitFeedbackHandler(req, res).catch(next));
+app.post('/v1/analyze', extensionOrAuth, (req, res, next) => analyzeUrlHandler(req, res).catch(next));
+app.post('/v1/feedback', extensionOrAuth, (req, res, next) => submitFeedbackHandler(req, res).catch(next));
 
 // Scans routes (protected - extension bypassed)
 app.get('/v1/scans', extensionOrAuth, (req, res, next) => getScansHandler(req, res).catch(next));

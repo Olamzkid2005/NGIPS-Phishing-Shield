@@ -399,8 +399,8 @@ async function analyzeUrlEnsemble(url) {
     }
 
     // Add individual model scores if divergent
-    const lrScore = mlResult.model_scores.logistic_regression;
-    const mnbScore = mlResult.model_scores.multinomial_nb;
+    const lrScore = mlResult.model_scores?.logistic_regression ?? 0;
+    const mnbScore = mlResult.model_scores?.multinomial_nb ?? 0;
     if (Math.abs(lrScore - mnbScore) > 0.3) {
       finalReasons.push(`Model divergence: LR=${(lrScore * 100).toFixed(1)}% vs MNB=${(mnbScore * 100).toFixed(1)}%`);
     }

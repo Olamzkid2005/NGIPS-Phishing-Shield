@@ -1,10 +1,5 @@
 let API_BASE_URL = 'http://localhost:8000';
 const API_PREFIX = '/v1';
-
-// Load API URL from storage on startup
-chrome.storage.local.get(['apiBaseUrl'], (result) => {
-  if (result.apiBaseUrl) API_BASE_URL = result.apiBaseUrl;
-});
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_BLOCKED_THRESHOLD = 0.7;
 const API_TIMEOUT_MS = 5000;
@@ -184,45 +179,57 @@ async function updateStats(blocked) {
   });
 }
 
-chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
-  if (details.frameId !== 0) return;
+chrome.storage.local.get(['apiBaseUrl'], (result) => {
+  if (result.apiBaseUrl) API_BASE_URL = result.apiBaseUrl;
+  registerNavigationListener();
+});
 
-  const settings = await getSettings();
-  if (!settings.enabled) return;
+function registerNavigationListener() {
+  chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+    if (details.frameId !== 0) return;
 
-  const url = details.url;
-  if (url.startsWith('chrome://') || url.startsWith('about:')) return;
-  if (!isValidUrl(url)) return;
+    const settings = await getSettings();
+    if (!settings.enabled) return;
 
-  const result = await checkUrlSafety(url);
+    const url = details.url;
+    if (url.startsWith('chrome://') || url.startsWith('about:')) return;
+    if (!isValidUrl(url)) return;
 
-  if (result.apiError) {
-    chrome.tabs.sendMessage(details.tabId, {
-      type: 'SHOW_WARNING',
-      url: url,
-      message: 'Unable to verify URL safety. The security service may be unavailable.'
-    });
-    await updateStats(false);
-    return;
-  }
+    const result = await checkUrlSafety(url);
 
-  if (result.is_phishing || result.confidence >= settings.blockThreshold) {
-    await updateStats(true);
+    if (result.is_phishing || result.confidence >= settings.blockThreshold) {
+      await updateStats(true);
 
-    const blockData = {
-      url: url,
-      threatType: result.threat_type,
-      confidence: result.confidence,
-      threatLevel: result.threat_level,
-      redFlags: result.reasons,
-      refId: 'SEC-PH-' + Math.random().toString(36).substr(2, 5).toUpperCase()
-    };
-    await chrome.storage.session.set({ [`block_${details.tabId}`]: blockData });
-    chrome.tabs.update(details.tabId, { url: chrome.runtime.getURL('blocked.html') });
-  } else {
-    await updateStats(false);
-  }
-}, { urls: ['<all_urls>'] });
+      const blockData = {
+        url: url,
+        threatType: result.threat_type,
+        confidence: result.confidence,
+        threatLevel: result.threat_level,
+        redFlags: result.reasons,
+        refId: 'SEC-PH-' + Math.random().toString(36).slice(2, 7).toUpperCase()
+      };
+      await chrome.storage.session.set({ [`block_${details.tabId}`]: blockData });
+      chrome.tabs.update(details.tabId, { url: chrome.runtime.getURL('blocked.html') });
+    } else {
+      await updateStats(false);
+      // On API error, show warning page instead of silently allowing
+      if (result.apiError) {
+        const blockData = {
+          url: url,
+          threatType: 'unknown',
+          confidence: 0,
+          threatLevel: 'warning',
+          redFlags: ['Unable to verify URL safety - API unavailable'],
+          refId: 'SEC-PH-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+          apiError: true
+        };
+        await chrome.storage.session.set({ [`block_${details.tabId}`]: blockData });
+        chrome.tabs.update(details.tabId, { url: chrome.runtime.getURL('blocked.html') });
+        return;
+      }
+    }
+  }, { urls: ['<all_urls>'] });
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CHECK_URL') {

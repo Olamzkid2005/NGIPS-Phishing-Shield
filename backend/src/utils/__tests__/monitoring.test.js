@@ -4,7 +4,6 @@ import { monitor } from '../monitoring.js';
 describe('ModelMonitor', () => {
   beforeEach(() => {
     monitor.reset();
-    monitor.baselineDistribution = null;
     monitor.maxHistorySize = 10000;
   });
 
@@ -167,7 +166,7 @@ describe('ModelMonitor', () => {
     expect(monitor.baselineDistribution).toBeNull();
   });
 
-  it('should not create duplicate drift alerts on repeated getStats calls', () => {
+  it('should not create duplicate drift alerts on repeated checkDrift calls', () => {
     for (let i = 0; i < 1000; i++) {
       monitor.recordPrediction(0.5, false, 5);
     }

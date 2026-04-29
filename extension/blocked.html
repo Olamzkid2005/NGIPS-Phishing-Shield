@@ -171,7 +171,7 @@
                         document.getElementById('confidence-bar').style.width = confidence + '%';
 
                         // Update reference ID
-                        document.getElementById('ref-id').textContent = data.refId || 'SEC-PH-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+                        document.getElementById('ref-id').textContent = data.refId || 'SEC-PH-' + Math.random().toString(36).slice(2, 7).toUpperCase();
 
                         // Update red flags
                         const container = document.getElementById('red-flags-container');
@@ -196,14 +196,24 @@
                 if (typeof chrome !== 'undefined' && chrome.tabs) {
                     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                         const tabId = tabs[0]?.id;
-                        if (tabId) {
-                            chrome.storage.session.get([`block_${tabId}`], (result) => {
-                                const data = result[`block_${tabId}`];
-                                if (data?.url) {
+                        if (!tabId) return;
+
+                        chrome.storage.session.get([`block_${tabId}`], (result) => {
+                            const data = result[`block_${tabId}`];
+                            if (!data?.url) return;
+
+                            // Add to whitelist first to prevent re-blocking
+                            try {
+                                const domain = new URL(data.url).hostname;
+                                chrome.runtime.sendMessage({ type: 'ADD_TO_WHITELIST', domain }, () => {
+                                    chrome.storage.session.remove(`block_${tabId}`);
                                     chrome.tabs.update(tabId, { url: data.url });
-                                }
-                            });
-                        }
+                                });
+                            } catch {
+                                chrome.storage.session.remove(`block_${tabId}`);
+                                chrome.tabs.update(tabId, { url: data.url });
+                            }
+                        });
                     });
                 }
             });

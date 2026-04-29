@@ -13,7 +13,7 @@ if (!JWT_SECRET) {
 const EFFECTIVE_JWT_SECRET = JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const JWT_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '7d'; // 7 days
-const BCRYPT_ROUNDS = 12;
+
 
 // In-memory token store (use database in production)
 const refreshTokens = new Map();
@@ -78,7 +78,9 @@ export function verifyAccessToken(token) {
     .update(header + '.' + payloadEncoded)
     .digest('base64url');
   
-  if (signature !== expectedSignature) {
+  const sigBuf = Buffer.from(signature, 'base64url');
+  const expectedBuf = Buffer.from(expectedSignature, 'base64url');
+  if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
     const error = new Error('Invalid token signature');
     error.name = 'JsonWebTokenError';
     throw error;

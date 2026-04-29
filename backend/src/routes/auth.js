@@ -3,8 +3,7 @@
  * POST /v1/auth/login, POST /v1/auth/refresh
  */
 
-import { v4 as uuidv4 } from 'uuid';
-import { 
+import {
   hashPassword, 
   comparePassword, 
   generateAccessToken, 

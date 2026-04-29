@@ -143,7 +143,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const settings = await chrome.storage.local.get(['apiBaseUrl']);
       const baseUrl = settings.apiBaseUrl || 'http://localhost:8000';
-      const response = await fetch(`${baseUrl}/health`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const response = await fetch(`${baseUrl}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
       if (response.ok) {
         const data = await response.json();
         if (elements.mlStatus) {

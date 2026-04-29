@@ -33,12 +33,6 @@ class URLTokenizer:
         return [self.stemmer.stem(word) for word in tokens]
 
 
-MODEL_HASHES = {
-    'logistic_regression_pipeline.pkl': None,
-    'multinomial_nb_pipeline.pkl': None,
-}
-
-
 def get_file_hash(path):
     """Get SHA256 hash of file."""
     h = hashlib.sha256()
@@ -160,6 +154,9 @@ def main():
         sys.exit(1)
 
     url = sys.argv[1]
+
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
 
     if not validate_url(url):
         print(json.dumps({'success': False, 'error': 'Invalid URL'}), flush=True)
