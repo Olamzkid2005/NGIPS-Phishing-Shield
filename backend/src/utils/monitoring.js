@@ -19,6 +19,11 @@ class ModelMonitor {
       this.predictions = this.predictions.slice(-this.maxHistorySize);
       this.latencies = this.latencies.slice(-this.maxHistorySize);
     }
+
+    // Auto-check drift every 100 predictions
+    if (this.baselineDistribution && this.predictions.length % 100 === 0) {
+      this.checkDrift();
+    }
   }
 
   calculatePSI(expected, actual) {

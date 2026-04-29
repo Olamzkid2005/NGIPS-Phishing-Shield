@@ -4,6 +4,7 @@
 
 import { execFile } from 'child_process';
 import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { monitor } from './monitoring.js';
@@ -12,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const DATA_DIR = join(__dirname, '../../data');
 const RETRAIN_SCRIPT = join(__dirname, '../../../ml-service/retrain.py');
+const EVALUATE_SCRIPT = join(__dirname, '../../../ml-service/evaluate.py');
 const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
 
 /**
@@ -42,6 +44,14 @@ async function exportTrainingData(scanHistory) {
  */
 export async function triggerRetrain(scanHistory) {
   try {
+    if (!existsSync(RETRAIN_SCRIPT)) {
+      return {
+        success: false,
+        error: `Retrain script not found at: ${RETRAIN_SCRIPT}. Create ml-service/retrain.py to enable retraining.`,
+        timestamp: new Date().toISOString()
+      };
+    }
+
     const csvPath = await exportTrainingData(scanHistory);
 
     return new Promise((resolve) => {
@@ -86,12 +96,27 @@ export async function triggerRetrain(scanHistory) {
  * Evaluate model against test dataset
  */
 export async function evaluateModel(testDataPath) {
-  const evalScript = join(__dirname, '../../ml/evaluate.py');
+  if (!existsSync(EVALUATE_SCRIPT)) {
+    return {
+      success: false,
+      error: `Evaluate script not found at: ${EVALUATE_SCRIPT}. Create ml-service/evaluate.py to enable evaluation.`,
+      timestamp: new Date().toISOString()
+    };
+  }
+
   const defaultDataPath = join(__dirname, '../../../Dataset/phishing_site_urls Combined.csv');
   const dataPath = testDataPath || defaultDataPath;
 
+  if (!existsSync(dataPath)) {
+    return {
+      success: false,
+      error: `Test data not found at: ${dataPath}`,
+      timestamp: new Date().toISOString()
+    };
+  }
+
   return new Promise((resolve) => {
-    execFile(PYTHON_CMD, [evalScript, '--data', dataPath, '--model', join(DATA_DIR, 'model.onnx')], {
+    execFile(PYTHON_CMD, [EVALUATE_SCRIPT, '--data', dataPath, '--model', join(DATA_DIR, 'model.onnx')], {
       timeout: 120000,
       cwd: join(__dirname, '../..')
     }, (error, stdout, stderr) => {

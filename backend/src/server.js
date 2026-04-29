@@ -8,6 +8,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { createRequire } from 'module';
+import { timingSafeEqual } from 'crypto';
 
 // Import routes
 import { analyzeUrlHandler, getScansHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
@@ -55,12 +56,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// Admin API key auth middleware
+// Admin API key auth middleware (timing-safe comparison)
 function adminAuth(req, res, next) {
   const apiKey = req.headers['x-api-key'] || req.query.apiKey;
-  if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
+  const expected = process.env.ADMIN_API_KEY;
+  
+  if (!apiKey || !expected) {
     return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' } });
   }
+  
+  try {
+    const apiKeyBuf = Buffer.from(apiKey, 'utf-8');
+    const expectedBuf = Buffer.from(expected, 'utf-8');
+    
+    if (apiKeyBuf.length !== expectedBuf.length || !timingSafeEqual(apiKeyBuf, expectedBuf)) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' } });
+    }
+  } catch {
+    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' } });
+  }
+  
   next();
 }
 
