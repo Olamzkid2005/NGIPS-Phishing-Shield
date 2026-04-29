@@ -233,7 +233,7 @@ const Feedback: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="max-w-xs truncate">
-                        <span className="font-mono text-sm text-gray-900 dark:text-white">{item.url}</span>
+                        <span className="font-mono text-sm text-gray-900 dark:text-white">{item.url || item.scanId || '—'}</span>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">{getTypeBadge(item.isFalsePositive)}</td>
@@ -323,7 +323,7 @@ const Feedback: React.FC = () => {
             <div className="p-6 space-y-4">
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400">URL</p>
-                <p className="font-mono text-sm break-all text-gray-900 dark:text-white">{selectedFeedback.url}</p>
+                <p className="font-mono text-sm break-all text-gray-900 dark:text-white">{selectedFeedback.url || selectedFeedback.scanId || '—'}</p>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Type</p>

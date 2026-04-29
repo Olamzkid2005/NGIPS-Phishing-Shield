@@ -174,7 +174,8 @@ export interface FeedbackRequest {
 
 export interface FeedbackItem {
   id: string;
-  url: string;
+  scanId: string;
+  url?: string;
   isFalsePositive: boolean;
   userComment: string | null;
   status: FeedbackStatus;
