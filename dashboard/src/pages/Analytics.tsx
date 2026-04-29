@@ -5,6 +5,8 @@ import { formatNumber } from '../utils';
 
 type TimePeriod = '24h' | '7d' | '30d' | 'all';
 
+const threatColors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6'];
+
 const Analytics: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [trends, setTrends] = useState<AnalyticsTrends | null>(null);
@@ -37,7 +39,6 @@ const Analytics: React.FC = () => {
     }
   }
 
-  const threatColors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6'];
   const maxDomainCount = topDomains.length > 0 ? Math.max(...topDomains.map((d) => d.count)) : 0;
 
   return (
@@ -97,7 +98,7 @@ const Analytics: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">P99 Latency</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats?.recentScansLast24h ? '< 200ms' : 'N/A'}
+                    {stats?.latencyPercentiles?.p99 ? `${stats.latencyPercentiles.p99}ms` : 'N/A'}
                   </p>
                 </div>
               </div>

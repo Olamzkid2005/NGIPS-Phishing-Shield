@@ -65,7 +65,7 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        console.error('[API Error]', error.message);
+        if (import.meta.env.DEV) console.error('[API Error]', error.message);
         return Promise.reject(this.handleError(error));
       }
     );

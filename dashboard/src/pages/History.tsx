@@ -43,27 +43,32 @@ const History: React.FC = () => {
   }
 
   function handleExportCsv() {
-    const headers = ['ID', 'URL', 'Action', 'Threat Level', 'Confidence', 'Model', 'Time'];
-    const rows = scans.map((s) => [
-      s.id,
-      s.url,
-      s.action,
-      s.threatLevel,
-      (s.confidence * 100).toFixed(1) + '%',
-      s.modelVersion,
-      s.timestamp,
-    ]);
-    const csv = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `phishing-scan-history-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const headers = ['ID', 'URL', 'Action', 'Threat Level', 'Confidence', 'Model', 'Time'];
+      const rows = scans.map((s) => [
+        s.id,
+        s.url,
+        s.action,
+        s.threatLevel,
+        (s.confidence * 100).toFixed(1) + '%',
+        s.modelVersion,
+        s.timestamp,
+      ]);
+      const csv = [
+        headers.join(','),
+        ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `phishing-scan-history-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Export failed:', error);
+      alert('Failed to export CSV');
+    }
   }
 
   return (

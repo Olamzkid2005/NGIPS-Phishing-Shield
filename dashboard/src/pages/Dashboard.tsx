@@ -3,6 +3,8 @@ import { apiService } from '../services/api';
 import type { DashboardStats, ScanRecord, ThreatClassification, ApiHealth } from '../types';
 import { formatRelativeTime, formatNumber, getRiskColor, getRiskLabel } from '../utils';
 
+const threatColors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6'];
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
@@ -36,8 +38,6 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     }
   }
-
-  const threatColors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6'];
 
   if (loading) {
     return (

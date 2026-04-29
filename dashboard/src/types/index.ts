@@ -237,7 +237,12 @@ export type Action = 'allow' | 'block';
 export interface Settings {
   autoRefresh: boolean;
   refreshInterval: number;
-  notifications: boolean;
+  notifications: boolean | {
+    blockedThreats?: boolean;
+    falsePositives?: boolean;
+    modelUpdates?: boolean;
+    systemAlerts?: boolean;
+  };
   theme: 'light' | 'dark' | 'system';
 }
 
@@ -247,10 +252,5 @@ export interface DashboardSettings {
   autoRefresh: boolean;
   refreshInterval: number;
   notificationsEnabled: boolean;
-}
-
-// Type guards
-export function isPhishing(result: AnalysisResult): boolean {
-  return result.action === 'block';
 }
 
