@@ -11,7 +11,8 @@ import { monitor } from './monitoring.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const DATA_DIR = join(__dirname, '../../data');
-const RETRAIN_SCRIPT = join(__dirname, '../../ml/retrain.py');
+const RETRAIN_SCRIPT = join(__dirname, '../../../ml-service/retrain.py');
+const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
 
 /**
  * Collect scan history with feedback and export to CSV
@@ -44,7 +45,7 @@ export async function triggerRetrain(scanHistory) {
     const csvPath = await exportTrainingData(scanHistory);
 
     return new Promise((resolve) => {
-      execFile('python', [RETRAIN_SCRIPT, '--data', csvPath, '--output', join(DATA_DIR, 'model.onnx')], {
+      execFile(PYTHON_CMD, [RETRAIN_SCRIPT, '--data', csvPath, '--output', join(DATA_DIR, 'model.onnx')], {
         timeout: 300000,
         cwd: join(__dirname, '../..')
       }, (error, stdout, stderr) => {
@@ -84,11 +85,13 @@ export async function triggerRetrain(scanHistory) {
 /**
  * Evaluate model against test dataset
  */
-export async function evaluateModel() {
+export async function evaluateModel(testDataPath) {
   const evalScript = join(__dirname, '../../ml/evaluate.py');
+  const defaultDataPath = join(__dirname, '../../../Dataset/phishing_site_urls Combined.csv');
+  const dataPath = testDataPath || defaultDataPath;
 
   return new Promise((resolve) => {
-    execFile('python', [evalScript, '--data', join(DATA_DIR, 'test_data.csv'), '--model', join(DATA_DIR, 'model.onnx')], {
+    execFile(PYTHON_CMD, [evalScript, '--data', dataPath, '--model', join(DATA_DIR, 'model.onnx')], {
       timeout: 120000,
       cwd: join(__dirname, '../..')
     }, (error, stdout, stderr) => {

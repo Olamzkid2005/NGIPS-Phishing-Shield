@@ -49,18 +49,12 @@ function calculateEntropy(text) {
  */
 function extractDomainInfo(url) {
   try {
-    let parsed;
-    try {
-      parsed = new URL(url);
-    } catch {
-      url = 'http://' + url;
-      parsed = new URL(url);
-    }
+    const parsed = new URL(url);
     
     const host = parsed.hostname.toLowerCase();
     
     // Check for IP address
-    if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    if (/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(host)) {
       return { domain: host, tld: 'ip', subdomainCount: 0, hasIp: true };
     }
     
@@ -96,18 +90,16 @@ function extractFeatures(url) {
   if (!url) return null;
   
   url = url.trim();
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = 'http://' + url;
-  }
+  const normalizedUrl = (url.startsWith('http://') || url.startsWith('https://')) ? url : 'http://' + url;
   
   let parsed;
   try {
-    parsed = new URL(url);
+    parsed = new URL(normalizedUrl);
   } catch {
     return null;
   }
   
-  const domainInfo = extractDomainInfo(url);
+  const domainInfo = extractDomainInfo(normalizedUrl);
   
   // Count characters
   let specialCharCount = 0;
@@ -128,8 +120,8 @@ function extractFeatures(url) {
   const hyphenCount = (url.match(/-/g) || []).length;
   const underlineCount = (url.match(/_/g) || []).length;
   const questionMarkCount = (url.match(/\?/g) || []).length;
-  const atSymbol = url.includes('@');
-  const doubleSlash = url.includes('//');
+  const atSymbol = !!parsed.username;
+  const doubleSlash = parsed.pathname.includes('//');
   const encodedChars = (url.match(/%/g) || []).length;
   
   // Check for port

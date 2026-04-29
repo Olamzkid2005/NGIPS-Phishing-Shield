@@ -41,7 +41,7 @@ class ModelMonitor {
     return buckets.map(b => b / total);
   }
 
-  checkDrift() {
+  calculateDrift() {
     if (!this.baselineDistribution || this.predictions.length < 100) {
       return { drifted: false, psi: 0 };
     }
@@ -50,16 +50,28 @@ class ModelMonitor {
     const psi = this.calculatePSI(this.baselineDistribution, currentDist);
 
     if (psi > 0.2) {
-      this.alerts.push({
-        type: 'DRIFT_DETECTED',
-        psi,
-        timestamp: Date.now(),
-        message: `Data drift detected (PSI: ${psi.toFixed(3)}). Model retraining recommended.`
-      });
       return { drifted: true, psi };
     }
 
     return { drifted: false, psi };
+  }
+
+  checkDrift() {
+    const result = this.calculateDrift();
+
+    if (result.drifted) {
+      this.alerts.push({
+        type: 'DRIFT_DETECTED',
+        psi: result.psi,
+        timestamp: Date.now(),
+        message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
+      });
+      if (this.alerts.length > 1000) {
+        this.alerts = this.alerts.slice(-500);
+      }
+    }
+
+    return result;
   }
 
   getLatencyPercentiles() {
@@ -78,7 +90,7 @@ class ModelMonitor {
   getStats() {
     const total = this.predictions.length;
     const phishingCount = this.predictions.filter(p => p.isPhishing).length;
-    const drift = this.checkDrift();
+    const drift = this.calculateDrift();
     const latency = this.getLatencyPercentiles();
 
     return {
@@ -101,6 +113,7 @@ class ModelMonitor {
   reset() {
     this.predictions = [];
     this.latencies = [];
+    this.baselineDistribution = null;
     this.alerts = [];
   }
 }

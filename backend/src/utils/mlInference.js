@@ -3,7 +3,7 @@
  * Calls Python script that loads .pkl pipelines for exact tokenization match
  */
 
-import { execFile } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -73,7 +73,24 @@ export async function predictPhishing(url) {
   return new Promise((resolve) => {
     const env = { ...process.env, PYTHONUNBUFFERED: '1' };
 
-    execFile(PYTHON_CMD, [PREDICT_SCRIPT, url], { timeout: 30000, env }, (error, stdout, stderr) => {
+    const proc = spawn(PYTHON_CMD, [PREDICT_SCRIPT, url], {
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    proc.on('error', (error) => {
+      console.error('[ML] Prediction error:', error.message);
+      resolve(null);
+    });
+
+    proc.on('close', (code) => {
       if (stdout && stdout.trim()) {
         try {
           const result = JSON.parse(stdout.trim());
@@ -99,17 +116,23 @@ export async function predictPhishing(url) {
         }
       }
 
-      if (error) {
-        console.error('[ML] Prediction error:', error.message);
+      if (code !== 0) {
+        console.error('[ML] Prediction process exited with code:', code);
         if (stderr) {
           console.error('[ML] stderr:', stderr.substring(0, 500));
         }
-        resolve(null);
-        return;
       }
 
       resolve(null);
     });
+
+    const timeout = setTimeout(() => {
+      proc.kill('SIGTERM');
+      console.error('[ML] Prediction timed out for URL:', url);
+      resolve(null);
+    }, 30000);
+
+    proc.on('close', () => clearTimeout(timeout));
   });
 }
 

@@ -2,7 +2,7 @@ let overlayInjected = false;
 
 function injectOverlay(data) {
   if (overlayInjected) return;
-  
+
   const overlay = document.createElement('div');
   overlay.id = 'phishing-warning-overlay';
   overlay.innerHTML = `
@@ -61,15 +61,23 @@ function injectOverlay(data) {
       </p>
     </div>
   `;
-  
+
   document.body.appendChild(overlay);
   overlayInjected = true;
-  
+
   document.getElementById('go-back-btn').addEventListener('click', () => {
     window.history.back();
   });
 
   document.getElementById('proceed-anyway-btn').addEventListener('click', () => {
+    const domain = new URL(data.url).hostname;
+    chrome.storage.local.get(['acceptedDomains'], (result) => {
+      const accepted = result.acceptedDomains || [];
+      if (!accepted.includes(domain)) {
+        accepted.push(domain);
+        chrome.storage.local.set({ acceptedDomains: accepted });
+      }
+    });
     overlay.remove();
     overlayInjected = false;
   });
@@ -119,28 +127,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       redFlags: message.redFlags
     });
     sendResponse({ success: true });
+    return true;
   }
-  
+
   if (message.type === 'REMOVE_OVERLAY') {
     removeOverlay();
     sendResponse({ success: true });
+    return true;
   }
-  
-  return true;
+
+  if (message.type === 'GET_TAB_STATUS') {
+    sendResponse({ blocked: false });
+    return false;
+  }
+
+  return false;
 });
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    chrome.runtime.sendMessage({ type: 'GET_TAB_STATUS' }, (response) => {
-      if (response && response.blocked) {
-        injectOverlay(response.data);
-      }
-    });
-  });
-} else {
+function initTabStatus() {
   chrome.runtime.sendMessage({ type: 'GET_TAB_STATUS' }, (response) => {
+    if (chrome.runtime.lastError) {
+      return;
+    }
     if (response && response.blocked) {
       injectOverlay(response.data);
     }
   });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTabStatus);
+} else {
+  initTabStatus();
 }

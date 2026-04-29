@@ -15,7 +15,7 @@ const stats = {
 async function fetchWithTimeout(url, options, timeout = API_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -36,15 +36,13 @@ async function analyzeUrlWithRetry(url, retryCount = 0) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })
     });
-    
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
-    // Parse the API response - normalize to our format
-    // The API returns: { action: 'block'|'allow', confidence: 0-1, threatLevel: 'low'|'medium'|'high'|'critical', ... }
+
     return {
       is_phishing: data.action === 'block',
       confidence: data.confidence || 0,
@@ -93,19 +91,19 @@ async function checkUrlSafety(url) {
   if (cached) {
     return cached.result;
   }
-  
+
   const whitelist = await getWhitelist();
   if (isWhitelisted(url, whitelist)) {
     return { is_phishing: false, confidence: 0, threat_type: 'none' };
   }
-  
+
   try {
     const result = await analyzeUrlWithRetry(url);
     setCache(url, result);
     return result;
   } catch (error) {
     console.error('URL analysis failed:', error);
-    return { is_phishing: false, confidence: 0, threat_type: 'error', error: error.message };
+    return { is_phishing: true, confidence: 1.0, threat_type: 'error', error: error.message };
   }
 }
 
@@ -177,30 +175,27 @@ async function updateStats(blocked) {
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return;
-  
+
   const settings = await getSettings();
   if (!settings.enabled) return;
-  
+
   const url = details.url;
   if (url.startsWith('chrome://') || url.startsWith('about:')) return;
-  
+
   const result = await checkUrlSafety(url);
-  
+
   if (result.is_phishing || result.confidence >= settings.blockThreshold) {
     await updateStats(true);
-    
-    chrome.tabs.update(details.tabId, { url: 'blocked.html' });
 
-    const tab = await chrome.tabs.get(details.tabId);
-    chrome.tabs.sendMessage(details.tabId, {
-      type: 'BLOCK_WARNING',
+    const blockData = {
       url: url,
       threatType: result.threat_type,
       confidence: result.confidence,
-      mlConfidence: result.ml_confidence,
       threatLevel: result.threat_level,
       redFlags: result.reasons
-    });
+    };
+    await chrome.storage.session.set({ [`block_${details.tabId}`]: blockData });
+    chrome.tabs.update(details.tabId, { url: chrome.runtime.getURL('blocked.html') });
   } else {
     await updateStats(false);
   }
@@ -211,49 +206,61 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     checkUrlSafety(message.url).then(sendResponse);
     return true;
   }
-  
+
   if (message.type === 'GET_STATS') {
     getStats().then(sendResponse);
     return true;
   }
-  
+
   if (message.type === 'ADD_TO_WHITELIST') {
     addToWhitelist(message.domain).then(() => sendResponse(true));
     return true;
   }
-  
+
   if (message.type === 'REMOVE_FROM_WHITELIST') {
     removeFromWhitelist(message.domain).then(() => sendResponse(true));
     return true;
   }
-  
+
   if (message.type === 'GET_WHITELIST') {
     getWhitelist().then(sendResponse);
     return true;
   }
-  
+
   if (message.type === 'GET_SETTINGS') {
     getSettings().then(sendResponse);
     return true;
   }
-  
+
   if (message.type === 'UPDATE_SETTINGS') {
     chrome.storage.local.set({ settings: message.settings }, () => sendResponse(true));
     return true;
   }
 
   if (message.type === 'REPORT_FALSE_POSITIVE') {
-    console.log('False positive reported:', message.url);
-    sendResponse({ success: true });
+    fetchWithTimeout(`${API_BASE_URL}${API_PREFIX}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scanId: message.scanId, isFalsePositive: true, userComment: message.comment })
+    }).then(() => sendResponse({ success: true }))
+      .catch(() => sendResponse({ success: false }));
     return true;
+  }
+
+  if (message.type === 'GET_TAB_STATUS') {
+    sendResponse({ blocked: false });
+    return false;
   }
 });
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [url, cached] of urlCache.entries()) {
-    if (now - cached.timestamp >= CACHE_TTL_MS) {
-      urlCache.delete(url);
+chrome.alarms.create('cacheCleanup', { periodInMinutes: 60 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'cacheCleanup') {
+    const now = Date.now();
+    for (const [url, cached] of urlCache.entries()) {
+      if (now - cached.timestamp >= CACHE_TTL_MS) {
+        urlCache.delete(url);
+      }
     }
   }
-}, CACHE_TTL_MS);
+});

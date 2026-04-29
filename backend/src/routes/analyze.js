@@ -10,6 +10,9 @@ import { monitor } from '../utils/monitoring.js';
 // In-memory scan history (replace with database in production)
 export const scanHistory = new Map();
 
+// In-memory feedback store
+const feedbackStore = new Map();
+
 /**
  * Store scan result
  */
@@ -79,6 +82,9 @@ export async function analyzeUrlHandler(req, res) {
       id: `scan_${uuidv4().slice(0, 8)}`,
       ...result
     });
+
+    // Record prediction for monitoring
+    monitor.recordPrediction(result.confidence, result.action === 'block', result.processingTime);
     
     // Return response
     return res.json({
@@ -126,9 +132,10 @@ export async function getScansHandler(req, res) {
     scans = scans.filter(s => s.action === action);
   }
   
-  // Filter by URL contains
+  // Filter by URL contains (sanitized)
   if (url_contains) {
-    scans = scans.filter(s => s.url.toLowerCase().includes(url_contains.toLowerCase()));
+    const sanitized = url_contains.replace(/[<>"']/g, '');
+    scans = scans.filter(s => s.url.toLowerCase().includes(sanitized.toLowerCase()));
   }
   
   const total = scans.length;
@@ -161,6 +168,16 @@ export async function submitFeedbackHandler(req, res) {
   }
   
   const scan = scanHistory.get(scanId);
+
+  if (!scan) {
+    return res.status(404).json({
+      error: {
+        code: 'SCAN_NOT_FOUND',
+        message: `Scan with id ${scanId} not found`
+      }
+    });
+  }
+
   const feedback = {
     id: `fb_${uuidv4().slice(0, 8)}`,
     scanId,
@@ -170,16 +187,20 @@ export async function submitFeedbackHandler(req, res) {
     timestamp: new Date().toISOString()
   };
 
-  if (scan) {
-    scan.feedbackCorrect = isFalsePositive ? 0 : 1;
-    monitor.alerts.push({
-      type: 'FEEDBACK_RECEIVED',
-      scanId,
-      isFalsePositive,
-      timestamp: Date.now(),
-      message: isFalsePositive ? `False positive reported for ${scan.url}` : `Positive feedback for ${scan.url}`
-    });
-  }
+  // Persist feedback on the scan
+  scan.feedback = feedback;
+
+  // Store in separate feedback store
+  feedbackStore.set(feedback.id, feedback);
+
+  scan.feedbackCorrect = isFalsePositive ? 0 : 1;
+  monitor.alerts.push({
+    type: 'FEEDBACK_RECEIVED',
+    scanId,
+    isFalsePositive,
+    timestamp: Date.now(),
+    message: isFalsePositive ? `False positive reported for ${scan.url}` : `Positive feedback for ${scan.url}`
+  });
 
   return res.status(201).json(feedback);
 }

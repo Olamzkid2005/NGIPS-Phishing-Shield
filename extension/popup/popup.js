@@ -114,21 +114,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  async function loadMLStatus() {
+    try {
+      const stats = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+      if (elements.mlStatus) {
+        elements.mlStatus.textContent = 'Active';
+        elements.mlStatus.className = 'ml-status-indicator active';
+      }
+    } catch (error) {
+      if (elements.mlStatus) {
+        elements.mlStatus.textContent = 'Inactive';
+        elements.mlStatus.className = 'ml-status-indicator inactive';
+      }
+    }
+  }
+
   function renderWhitelist(whitelist) {
     elements.whitelistCount.textContent = `${whitelist.length} domain${whitelist.length !== 1 ? 's' : ''}`;
-    
+
     if (whitelist.length === 0) {
       elements.whitelistList.innerHTML = '<div class="empty-state">No whitelisted domains</div>';
       return;
     }
-    
+
     elements.whitelistList.innerHTML = whitelist.map(domain => `
       <div class="whitelist-item">
         <span class="whitelist-domain">${escapeHtml(domain)}</span>
         <button class="remove-btn" data-domain="${escapeHtml(domain)}">&times;</button>
       </div>
     `).join('');
-    
+
     elements.whitelistList.querySelectorAll('.remove-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const domain = btn.dataset.domain;
@@ -140,22 +155,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   elements.enableToggle.addEventListener('change', async () => {
     const enabled = elements.enableToggle.checked;
+    const currentSettings = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' });
     await chrome.runtime.sendMessage({
       type: 'UPDATE_SETTINGS',
-      settings: { enabled }
+      settings: { ...currentSettings, enabled }
     });
   });
 
   elements.addWhitelistBtn.addEventListener('click', async () => {
     const domain = elements.whitelistInput.value.trim();
     if (!domain) return;
-    
+
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z]{2,})+$/;
     if (!domainRegex.test(domain)) {
       alert('Please enter a valid domain (e.g., example.com)');
       return;
     }
-    
+
     await chrome.runtime.sendMessage({ type: 'ADD_TO_WHITELIST', domain });
     elements.whitelistInput.value = '';
     loadWhitelist();
@@ -170,5 +186,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadStats();
   await loadSettings();
   await loadWhitelist();
+  await loadMLStatus();
   await checkCurrentPageThreat();
 });

@@ -7,6 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { createRequire } from 'module';
 
 // Import routes
 import { analyzeUrlHandler, getScansHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
@@ -18,6 +19,9 @@ import { loadModels, getMLStatus } from './utils/mlInference.js';
 // Import monitoring and retraining
 import { monitor } from './utils/monitoring.js';
 import { triggerRetrain, evaluateModel } from './utils/retrain.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json');
 
 // Create Express app
 const app = express();
@@ -51,17 +55,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Admin API key auth middleware
+function adminAuth(req, res, next) {
+  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+  if (!apiKey || apiKey !== process.env.ADMIN_API_KEY) {
+    return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' } });
+  }
+  next();
+}
+
 // Health check
 app.get('/health', (req, res) => {
   const mlStatus = getMLStatus();
   res.json({
     status: 'healthy',
     service: 'ngips-phishing-shield',
-    version: '1.0.0',
+    version,
     models: {
       status: mlStatus.loaded ? 'loaded' : 'unavailable',
       method: mlStatus.method,
-      version: '1.0.0',
+      version,
       available: mlStatus.loaded ? ['Python Subprocess (Ensemble)', 'Heuristic'] : ['Heuristic'],
       error: mlStatus.error
     }
@@ -73,7 +86,7 @@ app.get('/v1/models/status', (req, res) => {
   const mlStatus = getMLStatus();
   res.json({
     ml: mlStatus,
-    heuristic: { loaded: true, version: '1.0.0' }
+    heuristic: { loaded: true, version }
   });
 });
 
@@ -81,22 +94,22 @@ app.get('/v1/models/status', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     name: 'NGIPS Phishing Shield API',
-    version: '1.0.0',
+    version,
     status: 'operational',
     docs: '/docs'
   });
 });
 
 // API Routes
-app.post('/v1/analyze', analyzeUrlHandler);
-app.get('/v1/scans', getScansHandler);
-app.post('/v1/feedback', submitFeedbackHandler);
-app.get('/v1/stats', getStatsHandler);
+app.post('/v1/analyze', (req, res, next) => analyzeUrlHandler(req, res).catch(next));
+app.get('/v1/scans', (req, res, next) => getScansHandler(req, res).catch(next));
+app.post('/v1/feedback', (req, res, next) => submitFeedbackHandler(req, res).catch(next));
+app.get('/v1/stats', (req, res, next) => getStatsHandler(req, res).catch(next));
 
 // Admin Routes - Model Monitoring & Retraining
 
 // POST /v1/admin/retrain - Trigger model retraining
-app.post('/v1/admin/retrain', async (req, res) => {
+app.post('/v1/admin/retrain', adminAuth, async (req, res) => {
   try {
     const result = await triggerRetrain(scanHistory);
     if (result.success) {
@@ -112,7 +125,7 @@ app.post('/v1/admin/retrain', async (req, res) => {
 });
 
 // POST /v1/admin/calibrate - Set baseline distribution for drift detection
-app.post('/v1/admin/calibrate', (req, res) => {
+app.post('/v1/admin/calibrate', adminAuth, (req, res) => {
   monitor.setBaseline();
   return res.json({
     message: 'Baseline distribution calibrated',
@@ -123,7 +136,7 @@ app.post('/v1/admin/calibrate', (req, res) => {
 });
 
 // GET /v1/admin/alerts - Get recent monitoring alerts
-app.get('/v1/admin/alerts', (req, res) => {
+app.get('/v1/admin/alerts', adminAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
   return res.json({
     alerts: monitor.alerts.slice(-limit).reverse(),
@@ -133,7 +146,7 @@ app.get('/v1/admin/alerts', (req, res) => {
 });
 
 // POST /v1/admin/evaluate - Evaluate model metrics
-app.post('/v1/admin/evaluate', async (req, res) => {
+app.post('/v1/admin/evaluate', adminAuth, async (req, res) => {
   try {
     const result = await evaluateModel();
     if (result.success) {
@@ -186,6 +199,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 export default app;

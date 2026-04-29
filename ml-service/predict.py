@@ -2,7 +2,7 @@
 """
 ML Inference Script for Phishing Detection
 Called by Express backend via child_process
-Usage: python predict.py <url>
+Usage: python predict.py <url> [threshold]
 """
 
 import sys
@@ -32,6 +32,15 @@ class URLTokenizer:
         return [self.stemmer.stem(word) for word in tokens]
 
 
+def verify_model_file(path):
+    """Basic check that file exists and is not empty."""
+    if not os.path.exists(path):
+        return False
+    if os.path.getsize(path) < 1000:  # Model files should be at least 1KB
+        return False
+    return True
+
+
 def load_models():
     models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 
@@ -40,25 +49,38 @@ def load_models():
 
     models = {}
 
-    if os.path.exists(lr_path):
+    if verify_model_file(lr_path):
         models['logistic_regression'] = joblib.load(lr_path)
 
-    if os.path.exists(mnb_path):
+    if verify_model_file(mnb_path):
         models['multinomial_nb'] = joblib.load(mnb_path)
 
     return models
 
 
 def get_phishing_class_index(model):
-    """Find the index of 'bad' (phishing) class in the model's classes array."""
-    classes = model.classes_
-    for i, cls in enumerate(classes):
-        if cls == 'bad':
-            return i
-    return 0  # Default to first class if 'bad' not found
+    """Find the index of 'bad' (phishing) class in the model's classes_ array."""
+    classes = list(model.classes_)
+    if 'bad' in classes:
+        return classes.index('bad')
+    elif 1 in classes:
+        return classes.index(1)
+    else:
+        raise ValueError(f"Model classes {classes} do not contain 'bad' or 1. Cannot determine phishing class index.")
 
 
-def predict(url, models):
+def validate_url(url):
+    """Basic URL validation."""
+    if not url or not isinstance(url, str):
+        return False
+    if len(url) > 2048:
+        return False
+    if not any(c.isalnum() for c in url):
+        return False
+    return True
+
+
+def predict(url, models, threshold=0.5):
     start_time = time.time()
     results = {}
 
@@ -69,7 +91,7 @@ def predict(url, models):
             phishing_prob = float(proba[bad_idx])
             results[name] = round(phishing_prob, 6)
         except Exception as e:
-            results[name] = {'error': str(e)}
+            results[name] = {'error': 'Prediction failed'}
 
     valid_results = {k: v for k, v in results.items() if not isinstance(v, dict)}
 
@@ -91,7 +113,7 @@ def predict(url, models):
 
         return {
             'success': True,
-            'is_phishing': ensemble_score >= 0.5,
+            'is_phishing': ensemble_score >= threshold,
             'confidence': round(ensemble_score, 4),
             'ml_confidence': round(ensemble_score, 4),
             'model_scores': {
@@ -116,17 +138,23 @@ def main():
 
     url = sys.argv[1]
 
+    if not validate_url(url):
+        print(json.dumps({'success': False, 'error': 'Invalid URL'}), flush=True)
+        sys.exit(1)
+
+    threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
+
     try:
         models = load_models()
         if not models:
             print(json.dumps({'success': False, 'error': 'No models found'}), flush=True)
             sys.exit(1)
 
-        result = predict(url, models)
+        result = predict(url, models, threshold)
         print(json.dumps(result), flush=True)
         sys.exit(0)
     except Exception as e:
-        print(json.dumps({'success': False, 'error': str(e)}), flush=True)
+        print(json.dumps({'success': False, 'error': 'Internal error'}), flush=True)
         sys.exit(1)
 
 

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline';">
   <title>NGIPS Phishing Shield</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -326,6 +327,15 @@
     .ml-status-indicator.inactive {
       color: #9e9e9e;
     }
+    .ml-status-indicator.error {
+      color: #d32f2f;
+    }
+    .ml-status-indicator.warning {
+      color: #ff9800;
+    }
+    .ml-status-indicator.active {
+      color: #4caf50;
+    }
   </style>
 </head>
 <body>
@@ -333,7 +343,7 @@
     <h1>NGIPS Phishing Shield</h1>
     <p>Real-time protection active</p>
   </div>
-  
+
   <div class="stats-container">
     <div class="stats-title">Protection Statistics</div>
     <div class="stats-grid">
@@ -351,7 +361,7 @@
       </div>
     </div>
   </div>
-  
+
   <div class="threat-status-container">
     <div class="threat-status-header">
       <span class="threat-status-title">Current Page</span>
@@ -382,7 +392,7 @@
       </label>
     </div>
   </div>
-  
+
   <div class="whitelist-container">
     <div class="whitelist-header">
       <span class="whitelist-title">Whitelist</span>
@@ -396,7 +406,7 @@
       <div class="empty-state">No whitelisted domains</div>
     </div>
   </div>
-  
+
   <script src="popup.js"></script>
 </body>
 </html>
