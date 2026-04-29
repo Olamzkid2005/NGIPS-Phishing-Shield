@@ -153,19 +153,6 @@ export function revokeRefreshToken(token) {
 }
 
 /**
- * Store a refresh token with associated metadata
- */
-export function storeRefreshToken(token, metadata = {}) {
-  refreshTokens.set(token, {
-    token,
-    userId: metadata.userId,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    createdAt: new Date().toISOString(),
-    revoked: false
-  });
-}
-
-/**
  * Delete a refresh token (used during rotation)
  */
 export function deleteRefreshToken(token) {
@@ -191,6 +178,13 @@ export async function createUser(email, password, role = 'user') {
   users.set(email, user); // Index by email
   
   return { id, email, role };
+}
+
+/**
+ * Find user by ID
+ */
+export function findUserById(id) {
+  return users.get(id) || null;
 }
 
 /**
@@ -239,43 +233,6 @@ export function authMiddleware(req, res, next) {
   }
 }
 
-/**
- * Optional authentication middleware (doesn't fail if no token)
- */
-export function optionalAuthMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next();
-  }
-  
-  const token = authHeader.substring(7);
-  
-  try {
-    const decoded = verifyAccessToken(token);
-    req.user = decoded;
-  } catch {
-    // Ignore invalid tokens for optional auth
-  }
-  
-  next();
-}
-
-/**
- * Admin-only middleware
- */
-export function adminMiddleware(req, res, next) {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Admin access required'
-      }
-    });
-  }
-  next();
-}
-
 export default {
   hashPassword,
   comparePassword,
@@ -284,11 +241,8 @@ export default {
   generateRefreshToken,
   getRefreshToken,
   revokeRefreshToken,
-  storeRefreshToken,
   deleteRefreshToken,
   createUser,
   findUserByEmail,
-  authMiddleware,
-  optionalAuthMiddleware,
-  adminMiddleware
+  authMiddleware
 };

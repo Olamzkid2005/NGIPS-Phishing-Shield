@@ -52,8 +52,3 @@ export async function updateFeedbackHandler(req, res) {
     timestamp: feedback.createdAt
   });
 }
-
-export default {
-  getAllFeedbackHandler,
-  updateFeedbackHandler
-};

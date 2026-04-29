@@ -56,8 +56,3 @@ export async function updateSettingsHandler(req, res) {
   
   return res.json(settings);
 }
-
-export default {
-  getSettingsHandler,
-  updateSettingsHandler
-};

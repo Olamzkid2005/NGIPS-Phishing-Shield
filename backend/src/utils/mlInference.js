@@ -39,7 +39,7 @@ export async function loadModels() {
     }
 
     return new Promise((resolve) => {
-      execFile(PYTHON_CMD, ['--version'], (error, stdout) => {
+      execFile(PYTHON_CMD, ['--version'], { timeout: 5000 }, (error, stdout) => {
         if (error) {
           modelLoadError = 'Python not available';
           console.warn('[ML] Python not available:', error.message);

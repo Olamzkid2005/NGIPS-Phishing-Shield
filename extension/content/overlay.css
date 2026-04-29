@@ -237,19 +237,6 @@
   background: linear-gradient(90deg, #4caf50 0%, #ff9800 50%, #f44336 100%);
 }
 
-.report-fp-btn {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.report-fp-btn:hover {
-  background: #bbdefb;
-}
-
-.report-fp-btn:disabled {
-  cursor: not-allowed;
-}
-
 @media (prefers-color-scheme: dark) {
   #phishing-warning-overlay {
     background: linear-gradient(135deg, #0d0d1a 0%, #0a1628 50%, #0a1a30 100%);
@@ -310,15 +297,6 @@
 
   .confidence-bar {
     background: #424242;
-  }
-
-  .report-fp-btn {
-    background: #1a237e;
-    color: #90caf9;
-  }
-
-  .report-fp-btn:hover {
-    background: #283593;
   }
 }
 

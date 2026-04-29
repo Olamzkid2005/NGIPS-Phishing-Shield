@@ -188,7 +188,13 @@
 
             // Go Back button
             document.getElementById('go-back-btn').addEventListener('click', () => {
-                window.history.back();
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    const tabId = tabs[0]?.id;
+                    if (tabId) {
+                        chrome.storage.session.remove(`block_${tabId}`);
+                        chrome.tabs.update(tabId, { url: 'chrome://newtab' });
+                    }
+                });
             });
 
             // Proceed Anyway button

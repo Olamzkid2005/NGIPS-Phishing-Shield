@@ -42,8 +42,8 @@ function injectOverlay(data) {
           `).join('')}
         </ul>
       </div>
-      <div class="threat-level-badge ${['low', 'medium', 'high', 'critical'].includes(data.threatLevel) ? data.threatLevel : 'high'}">
-        ${(['low', 'medium', 'high', 'critical'].includes(data.threatLevel) ? data.threatLevel : 'high').toUpperCase()} THREAT
+      <div class="threat-level-badge ${['low', 'medium', 'high', 'critical', 'warning'].includes(data.threatLevel) ? data.threatLevel : 'high'}">
+        ${(['low', 'medium', 'high', 'critical', 'warning'].includes(data.threatLevel) ? data.threatLevel : 'high').toUpperCase()} THREAT
       </div>
       <div class="confidence-section">
         <div class="confidence-label">ML Confidence: ${((data.mlConfidence || data.confidence || 0) * 100).toFixed(1)}%</div>

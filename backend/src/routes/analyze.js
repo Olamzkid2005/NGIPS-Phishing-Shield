@@ -215,10 +215,3 @@ export async function submitFeedbackHandler(req, res) {
 
   return res.status(201).json(feedback);
 }
-
-export default {
-  analyzeUrlHandler,
-  getScansHandler,
-  getScanByIdHandler,
-  submitFeedbackHandler
-};

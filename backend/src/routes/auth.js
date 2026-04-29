@@ -11,9 +11,9 @@ import {
   generateRefreshToken,
   getRefreshToken,
   deleteRefreshToken,
-  storeRefreshToken,
   revokeRefreshToken,
   findUserByEmail,
+  findUserById,
   createUser
 } from '../utils/auth.js';
 
@@ -104,7 +104,8 @@ export async function refreshHandler(req, res) {
   deleteRefreshToken(refreshToken);
   
   const userId = typeof stored === 'string' ? stored : stored.userId || 'user';
-  const role = typeof stored === 'object' ? stored.role || 'user' : 'user';
+  const user = findUserById(userId);
+  const role = user?.role || 'user';
   
   const newAccessToken = generateAccessToken({ sub: userId, role });
   const newRefreshToken = generateRefreshToken(userId);
@@ -158,10 +159,3 @@ export async function meHandler(req, res) {
     });
   }
 }
-
-export default {
-  loginHandler,
-  refreshHandler,
-  logoutHandler,
-  meHandler
-};

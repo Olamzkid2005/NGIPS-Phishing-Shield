@@ -179,9 +179,12 @@ async function updateStats(blocked) {
   });
 }
 
+// Register listener synchronously (MV3 requirement)
+registerNavigationListener();
+
+// Load config asynchronously (used by handler when it runs)
 chrome.storage.local.get(['apiBaseUrl'], (result) => {
   if (result.apiBaseUrl) API_BASE_URL = result.apiBaseUrl;
-  registerNavigationListener();
 });
 
 function registerNavigationListener() {
@@ -202,6 +205,7 @@ function registerNavigationListener() {
 
       const blockData = {
         url: url,
+        scanId: result.id || null,
         threatType: result.threat_type,
         confidence: result.confidence,
         threatLevel: result.threat_level,
@@ -272,9 +276,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scanId: message.scanId || message.url || 'unknown',
+        scanId: message.scanId || 'unknown',
         isFalsePositive: true,
-        userComment: message.comment || message.threatType || 'User reported'
+        userComment: message.comment || 'User reported false positive'
       })
     }).then(() => sendResponse({ success: true }))
       .catch(() => sendResponse({ success: false }));

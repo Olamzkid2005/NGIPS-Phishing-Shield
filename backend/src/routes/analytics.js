@@ -130,9 +130,3 @@ export async function getThreatClassificationHandler(req, res) {
   
   return res.json({ classification });
 }
-
-export default {
-  getTrendsHandler,
-  getTopDomainsHandler,
-  getThreatClassificationHandler
-};

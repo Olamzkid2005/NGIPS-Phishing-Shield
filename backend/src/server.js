@@ -247,6 +247,10 @@ async function startServer() {
   // Load ML models (non-blocking, system works without them)
   await loadModels();
 
+  if (!process.env.ADMIN_API_KEY) {
+    console.warn('[SERVER] WARNING: ADMIN_API_KEY not set. Admin endpoints will be inaccessible.');
+  }
+
   app.listen(PORT, () => {
     const mlStatus = getMLStatus();
     console.log(`

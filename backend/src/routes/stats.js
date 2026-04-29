@@ -16,6 +16,7 @@ export async function getStatsHandler(req, res) {
   const mlStatus = getMLStatus();
 
   const scans = Array.from(scanHistory.values());
+  // Uses real feedback stats from feedbackRepository
   const feedbackStats = await getFeedbackStats();
 
   return res.json({
@@ -49,5 +50,3 @@ export async function getStatsHandler(req, res) {
     timestamp: new Date().toISOString()
   });
 }
-
-export default { getStatsHandler };
