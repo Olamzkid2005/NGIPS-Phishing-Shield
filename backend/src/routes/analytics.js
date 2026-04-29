@@ -99,7 +99,7 @@ export async function getThreatClassificationHandler(req, res) {
   
   for (const scan of scans) {
     if (scan.action === 'block') {
-      const reasons = JSON.parse(scan.reasons || '[]');
+      const reasons = Array.isArray(scan.reasons) ? scan.reasons : [];
       const reasonStr = reasons.join(' ').toLowerCase();
       
       if (reasonStr.includes('phishing')) typeCounts.phishing++;
