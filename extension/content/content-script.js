@@ -132,6 +132,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'SHOW_WARNING') {
+    injectOverlay({
+      url: message.url,
+      threatType: 'unknown',
+      confidence: 0,
+      threatLevel: 'warning',
+      redFlags: [message.message || 'Unable to verify URL safety.']
+    });
+    sendResponse({ success: true });
+    return true;
+  }
+
   if (message.type === 'REMOVE_OVERLAY') {
     removeOverlay();
     sendResponse({ success: true });

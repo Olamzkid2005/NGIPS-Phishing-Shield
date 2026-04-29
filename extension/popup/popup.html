@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
     <title>NGIPS Phishing Shield</title>
     <!-- TODO: Bundle Tailwind CSS locally instead of using CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -158,15 +158,15 @@
 
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 bg-white/80 backdrop-blur-md border-t border-outline-variant">
-        <button class="flex flex-col items-center justify-center text-primary-container bg-blue-50/50 py-2 w-full">
+        <button id="nav-protection" class="flex flex-col items-center justify-center text-primary-container bg-blue-50/50 py-2 w-full">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shield</span>
             <span class="font-['Inter'] text-[11px] uppercase tracking-wider font-bold">Protection</span>
         </button>
-        <button class="flex flex-col items-center justify-center text-slate-400 py-2 w-full hover:text-blue-500 transition-colors">
+        <button id="nav-whitelist" class="flex flex-col items-center justify-center text-slate-400 py-2 w-full hover:text-blue-500 transition-colors">
             <span class="material-symbols-outlined">verified_user</span>
             <span class="font-['Inter'] text-[11px] uppercase tracking-wider font-bold">Whitelist</span>
         </button>
-        <button class="flex flex-col items-center justify-center text-slate-400 py-2 w-full hover:text-blue-500 transition-colors">
+        <button id="nav-settings" class="flex flex-col items-center justify-center text-slate-400 py-2 w-full hover:text-blue-500 transition-colors" onclick="chrome.runtime.openOptionsPage()">
             <span class="material-symbols-outlined">settings</span>
             <span class="font-['Inter'] text-[11px] uppercase tracking-wider font-bold">Settings</span>
         </button>

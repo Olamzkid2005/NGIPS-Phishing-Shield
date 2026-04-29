@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import type { AnalysisResult, ScanRecord } from '../types';
+import type { AnalysisResult, ScanRecord, ThreatLevel } from '../types';
 import { formatRelativeTime, getRiskColor, getRiskLabel, normalizeUrl } from '../utils';
 
 const Analyzer: React.FC = () => {
@@ -60,13 +60,12 @@ const Analyzer: React.FC = () => {
     return 'bg-safe-500';
   }
 
-  function getThreatLevelIcon(level: string): string {
+  function getThreatLevelIcon(level: ThreatLevel): string {
     switch (level) {
       case 'critical': return 'error';
       case 'high': return 'warning';
       case 'medium': return 'info';
       case 'low': return 'check_circle';
-      default: return 'help';
     }
   }
 

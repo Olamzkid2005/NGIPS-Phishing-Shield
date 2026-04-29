@@ -6,7 +6,11 @@
 import crypto from 'crypto';
 
 // Configuration constants (should be in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.warn('[AUTH] WARNING: JWT_SECRET not set. Using generated secret (tokens will not persist across restarts).');
+}
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const JWT_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '7d'; // 7 days
 const BCRYPT_ROUNDS = 12;
@@ -56,7 +60,7 @@ export function generateAccessToken(payload) {
   })).toString('base64url');
   
   const signature = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', EFFECTIVE_JWT_SECRET)
     .update(header + '.' + payloadEncoded)
     .digest('base64url');
   
@@ -70,7 +74,7 @@ export function verifyAccessToken(token) {
   const [header, payloadEncoded, signature] = token.split('.');
   
   const expectedSignature = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', EFFECTIVE_JWT_SECRET)
     .update(header + '.' + payloadEncoded)
     .digest('base64url');
   

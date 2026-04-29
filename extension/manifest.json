@@ -12,8 +12,7 @@
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.svg",
-      "48": "icons/icon48.svg",
-      "128": "icons/icon48.svg"
+      "48": "icons/icon48.svg"
     }
   },
   "content_scripts": [{
@@ -23,7 +22,6 @@
   }],
   "icons": {
     "16": "icons/icon16.svg",
-    "48": "icons/icon48.svg",
-    "128": "icons/icon48.svg"
+    "48": "icons/icon48.svg"
   }
 }

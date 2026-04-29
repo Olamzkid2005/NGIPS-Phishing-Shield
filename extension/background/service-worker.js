@@ -1,5 +1,10 @@
-const API_BASE_URL = 'http://localhost:8000';
+let API_BASE_URL = 'http://localhost:8000';
 const API_PREFIX = '/v1';
+
+// Load API URL from storage on startup
+chrome.storage.local.get(['apiBaseUrl'], (result) => {
+  if (result.apiBaseUrl) API_BASE_URL = result.apiBaseUrl;
+});
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_BLOCKED_THRESHOLD = 0.7;
 const API_TIMEOUT_MS = 5000;
@@ -86,6 +91,12 @@ function isWhitelisted(url, whitelist) {
   }
 }
 
+function isValidUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (url.length > 2048) return false;
+  return /^https?:\/\//i.test(url);
+}
+
 async function checkUrlSafety(url) {
   const cached = isCached(url);
   if (cached) {
@@ -103,7 +114,7 @@ async function checkUrlSafety(url) {
     return result;
   } catch (error) {
     console.error('URL analysis failed:', error);
-    return { is_phishing: false, confidence: 0, threat_type: 'unknown', error: error.message };
+    return { is_phishing: false, confidence: 0, threat_type: 'unknown', error: error.message, apiError: true };
   }
 }
 
@@ -181,8 +192,19 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 
   const url = details.url;
   if (url.startsWith('chrome://') || url.startsWith('about:')) return;
+  if (!isValidUrl(url)) return;
 
   const result = await checkUrlSafety(url);
+
+  if (result.apiError) {
+    chrome.tabs.sendMessage(details.tabId, {
+      type: 'SHOW_WARNING',
+      url: url,
+      message: 'Unable to verify URL safety. The security service may be unavailable.'
+    });
+    await updateStats(false);
+    return;
+  }
 
   if (result.is_phishing || result.confidence >= settings.blockThreshold) {
     await updateStats(true);

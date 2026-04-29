@@ -40,13 +40,10 @@ const Settings: React.FC = () => {
     }
   }, []);
 
-  function saveSettings() {
-    const settings = { theme, autoRefresh, refreshInterval, notifications };
-    localStorage.setItem('ngips-dashboard-settings', JSON.stringify(settings));
-  }
-
   useEffect(() => {
-    saveSettings();
+    localStorage.setItem('ngips-dashboard-settings', JSON.stringify({
+      theme, autoRefresh, refreshInterval, notifications,
+    }));
   }, [theme, autoRefresh, refreshInterval, notifications]);
 
   async function checkHealth() {
@@ -67,7 +64,7 @@ const Settings: React.FC = () => {
       await apiService.post('/v1/admin/calibrate');
       alert('Baseline calibrated');
     } catch (error) {
-      console.error('Calibration failed:', error);
+      if (import.meta.env.DEV) console.error('Calibration failed:', error);
       alert('Calibration failed');
     } finally {
       setRecalibrating(false);
@@ -81,7 +78,7 @@ const Settings: React.FC = () => {
       await apiService.post('/v1/admin/retrain');
       alert('Retraining started');
     } catch (error) {
-      console.error('Retraining failed:', error);
+      if (import.meta.env.DEV) console.error('Retraining failed:', error);
       alert('Retraining failed');
     } finally {
       setRetraining(false);
@@ -114,7 +111,7 @@ const Settings: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Export failed:', err);
+      if (import.meta.env.DEV) console.error('Export failed:', err);
     } finally {
       setExporting(false);
     }
@@ -124,18 +121,10 @@ const Settings: React.FC = () => {
     if (!window.confirm('Are you sure you want to clear all scan history? This action cannot be undone.')) return;
     setClearing(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_BASE_URL}/v1/admin/clear-history`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.ok) {
-        alert('History cleared successfully');
-      } else {
-        alert('Failed to clear history');
-      }
+      await apiService.post('/v1/admin/clear-history');
+      alert('History cleared successfully');
     } catch (error) {
-      console.error('Clear history failed:', error);
+      if (import.meta.env.DEV) console.error('Clear history failed:', error);
       alert('Failed to clear history');
     } finally {
       setClearing(false);
@@ -354,6 +343,7 @@ const Settings: React.FC = () => {
             )}
             {exporting ? 'Exporting...' : 'Export CSV'}
           </button>
+          <p className="text-xs text-slate-400 mt-2">Exports up to 1000 most recent records</p>
           <button
             onClick={handleClearHistory}
             disabled={clearing}

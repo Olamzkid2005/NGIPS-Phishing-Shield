@@ -141,7 +141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load ML status
   async function loadMLStatus() {
     try {
-      const response = await fetch('http://localhost:8000/health');
+      const settings = await chrome.storage.local.get(['apiBaseUrl']);
+      const baseUrl = settings.apiBaseUrl || 'http://localhost:8000';
+      const response = await fetch(`${baseUrl}/health`);
       if (response.ok) {
         const data = await response.json();
         if (elements.mlStatus) {

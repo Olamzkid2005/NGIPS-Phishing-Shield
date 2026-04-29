@@ -106,21 +106,15 @@ export interface ScanHistoryResponse {
 
 // ============ Analytics Types ============
 
-export interface DailyTrendData {
-  date: string;
-  total: number;
-  blocked: number;
-}
-
-export interface WeeklyTrendData {
+export interface TrendDataPoint {
   date: string;
   total: number;
   blocked: number;
 }
 
 export interface AnalyticsTrends {
-  dailyData: DailyTrendData[];
-  weeklyData: WeeklyTrendData[];
+  dailyData: TrendDataPoint[];
+  weeklyData: TrendDataPoint[];
 }
 
 export interface TopDomain {
@@ -244,7 +238,7 @@ export interface Settings {
   autoRefresh: boolean;
   refreshInterval: number;
   notifications: boolean;
-  theme: string;
+  theme: 'light' | 'dark' | 'system';
 }
 
 export interface DashboardSettings {

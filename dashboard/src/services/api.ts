@@ -7,6 +7,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import type {
   AnalysisResult,
   ApiHealth,
+  AuthUser,
   FeedbackRequest,
   DashboardStats,
   LoginRequest,
@@ -204,8 +205,8 @@ class ApiService {
     await this.client.post('/v1/auth/logout', { refreshToken });
   }
 
-  async getCurrentUser(): Promise<{ id: string; email: string; role: string }> {
-    const response = await this.client.get<{ id: string; email: string; role: string }>('/v1/auth/me');
+  async getCurrentUser(): Promise<AuthUser> {
+    const response = await this.client.get<AuthUser>('/v1/auth/me');
     return response.data;
   }
 

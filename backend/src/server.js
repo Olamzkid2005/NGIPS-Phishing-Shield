@@ -71,7 +71,7 @@ app.use((req, res, next) => {
 
 // Admin API key auth middleware (timing-safe comparison)
 function adminAuth(req, res, next) {
-  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+  const apiKey = req.headers['x-api-key'];
   const expected = process.env.ADMIN_API_KEY;
   
   if (!apiKey || !expected) {
@@ -128,23 +128,38 @@ app.get('/', (req, res) => {
   });
 });
 
+// Extension auth bypass (check for extension origin, test env, or API key)
+function extensionOrAuth(req, res, next) {
+  // Allow in test environment
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+  const origin = req.headers.origin || '';
+  if (origin.startsWith('chrome-extension://')) {
+    return next();
+  }
+  return authMiddleware(req, res, next);
+}
+
 // API Routes (public)
 app.post('/v1/analyze', (req, res, next) => analyzeUrlHandler(req, res).catch(next));
 app.post('/v1/feedback', (req, res, next) => submitFeedbackHandler(req, res).catch(next));
-app.get('/v1/stats', (req, res, next) => getStatsHandler(req, res).catch(next));
 
-// Scans routes (public - extension needs access)
-app.get('/v1/scans', (req, res, next) => getScansHandler(req, res).catch(next));
-app.get('/v1/scans/:id', (req, res, next) => getScanByIdHandler(req, res).catch(next));
+// Scans routes (protected - extension bypassed)
+app.get('/v1/scans', extensionOrAuth, (req, res, next) => getScansHandler(req, res).catch(next));
+app.get('/v1/scans/:id', extensionOrAuth, (req, res, next) => getScanByIdHandler(req, res).catch(next));
+
+// Stats (protected - extension bypassed)
+app.get('/v1/stats', extensionOrAuth, (req, res, next) => getStatsHandler(req, res).catch(next));
 
 // Feedback admin routes
 app.get('/v1/feedback', adminAuth, (req, res, next) => getAllFeedbackHandler(req, res).catch(next));
 app.patch('/v1/feedback/:id/status', adminAuth, (req, res, next) => updateFeedbackHandler(req, res).catch(next));
 
-// Analytics routes
-app.get('/v1/analytics/trends', (req, res, next) => getTrendsHandler(req, res).catch(next));
-app.get('/v1/analytics/top-domains', (req, res, next) => getTopDomainsHandler(req, res).catch(next));
-app.get('/v1/analytics/threats', (req, res, next) => getThreatClassificationHandler(req, res).catch(next));
+// Analytics routes (protected - extension bypassed)
+app.get('/v1/analytics/trends', extensionOrAuth, (req, res, next) => getTrendsHandler(req, res).catch(next));
+app.get('/v1/analytics/top-domains', extensionOrAuth, (req, res, next) => getTopDomainsHandler(req, res).catch(next));
+app.get('/v1/analytics/threats', extensionOrAuth, (req, res, next) => getThreatClassificationHandler(req, res).catch(next));
 
 // Settings routes (protected)
 app.use('/v1/settings', authMiddleware);

@@ -158,5 +158,37 @@ describe('Analyze API', () => {
         .send({ isFalsePositive: true })
         .expect(400);
     });
+
+    it('should return 404 for non-existent scanId', async () => {
+      await request(app)
+        .post('/v1/feedback')
+        .send({
+          scanId: 'non-existent-id-12345',
+          isFalsePositive: false,
+          userComment: 'Test'
+        })
+        .expect(404);
+    });
+  });
+
+  describe('GET /v1/scans/:id', () => {
+    it('should return a specific scan by id', async () => {
+      const analyzeRes = await request(app)
+        .post('/v1/analyze')
+        .send({ url: 'https://example.com' });
+
+      const res = await request(app)
+        .get(`/v1/scans/${analyzeRes.body.id}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(analyzeRes.body.id);
+      expect(res.body.url).toBe('https://example.com');
+    });
+
+    it('should return 404 for non-existent scan id', async () => {
+      await request(app)
+        .get('/v1/scans/non-existent-id-12345')
+        .expect(404);
+    });
   });
 });

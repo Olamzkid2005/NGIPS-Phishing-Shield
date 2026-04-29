@@ -19,15 +19,17 @@ import {
 } from '../utils/auth.js';
 
 /**
- * Initialize demo user if not exists
+ * Initialize demo user if not exists (dev only)
  */
-(async () => {
-  try {
-    await createUser('demo@example.com', 'demo123', 'user');
-  } catch (e) {
-    // User may already exist
-  }
-})();
+if (process.env.NODE_ENV !== 'production') {
+  (async () => {
+    try {
+      await createUser('demo@example.com', 'demo123', 'user');
+    } catch (e) {
+      // User may already exist
+    }
+  })();
+}
 
 /**
  * POST /v1/auth/login - Authenticate user
@@ -99,13 +101,14 @@ export async function refreshHandler(req, res) {
     return res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' } });
   }
   
-  // Remove used token (rotation)
+  // Delete used token (rotation)
   deleteRefreshToken(refreshToken);
   
-  const newAccessToken = generateAccessToken({ sub: stored.userId || 'user', role: 'user' });
-  const newRefreshToken = generateRefreshToken({ sub: stored.userId || 'user' });
+  const userId = typeof stored === 'string' ? stored : stored.userId || 'user';
+  const role = typeof stored === 'object' ? stored.role || 'user' : 'user';
   
-  storeRefreshToken(newRefreshToken, { userId: stored.userId || 'user' });
+  const newAccessToken = generateAccessToken({ sub: userId, role });
+  const newRefreshToken = generateRefreshToken(userId);
   
   return res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
 }
