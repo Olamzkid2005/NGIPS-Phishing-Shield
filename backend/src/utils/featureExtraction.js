@@ -3,6 +3,8 @@
  * Extracts structural, lexical, and heuristic features from URLs
  */
 
+import { predictPhishing } from './mlInference.js';
+
 // Suspicious TLDs often used in phishing
 const SUSPICIOUS_TLDS = new Set([
   'xyz', 'top', 'gq', 'tk', 'ml', 'cf', 'ga', 'click', 'link', 
@@ -355,5 +357,98 @@ function analyzeUrl(url) {
   };
 }
 
-export { extractFeatures, calculatePhishingScore, generateReasons, analyzeUrl };
-export default { analyzeUrl, extractFeatures, calculatePhishingScore };
+/**
+ * Ensemble analysis combining heuristic and ML predictions
+ * Uses 30% heuristic + 70% ML when ML is available, 100% heuristic otherwise
+ */
+async function analyzeUrlEnsemble(url) {
+  const startTime = Date.now();
+
+  // Run heuristic analysis
+  const heuristicResult = analyzeUrl(url);
+
+  if (!heuristicResult.isValid) {
+    return {
+      ...heuristicResult,
+      heuristicConfidence: 0,
+      mlConfidence: null,
+      modelScores: null,
+      mlAvailable: false
+    };
+  }
+
+  // Run ML prediction
+  const mlResult = await predictPhishing(url);
+
+  let finalConfidence;
+  let finalReasons;
+  let mlConfidence = null;
+  let modelScores = null;
+  let mlAvailable = false;
+
+  if (mlResult) {
+    mlAvailable = true;
+    mlConfidence = mlResult.ml_confidence;
+    modelScores = mlResult.model_scores;
+
+    // Ensemble: 30% heuristic + 70% ML
+    finalConfidence = (heuristicResult.confidence * 0.3) + (mlResult.confidence * 0.7);
+
+    // Combine reasons from both systems
+    finalReasons = [...heuristicResult.reasons];
+
+    // Add ML-specific reasons
+    if (mlResult.is_phishing) {
+      const confidencePct = Math.round(mlResult.confidence * 100);
+      finalReasons.push(`ML model high confidence (${confidencePct}%)`);
+    } else {
+      const confidencePct = Math.round(mlResult.confidence * 100);
+      finalReasons.push(`ML model indicates low risk (${confidencePct}%)`);
+    }
+
+    // Add individual model scores if divergent
+    const lrScore = mlResult.model_scores.logistic_regression;
+    const mnbScore = mlResult.model_scores.multinomial_nb;
+    if (Math.abs(lrScore - mnbScore) > 0.3) {
+      finalReasons.push(`Model divergence: LR=${(lrScore * 100).toFixed(1)}% vs MNB=${(mnbScore * 100).toFixed(1)}%`);
+    }
+  } else {
+    // No ML available, use 100% heuristic
+    finalConfidence = heuristicResult.confidence;
+    finalReasons = [...heuristicResult.reasons];
+  }
+
+  // Determine threat level and action based on ensemble score
+  let threatLevel, action;
+  if (finalConfidence >= 0.8) {
+    threatLevel = 'critical';
+    action = 'block';
+  } else if (finalConfidence >= 0.6) {
+    threatLevel = 'high';
+    action = 'block';
+  } else if (finalConfidence >= 0.4) {
+    threatLevel = 'medium';
+    action = 'allow';
+  } else {
+    threatLevel = 'low';
+    action = 'allow';
+  }
+
+  return {
+    isValid: true,
+    url,
+    action,
+    confidence: Math.round(finalConfidence * 10000) / 10000,
+    threatLevel,
+    reasons: finalReasons,
+    features: heuristicResult.features,
+    heuristicConfidence: heuristicResult.confidence,
+    mlConfidence,
+    modelScores,
+    mlAvailable,
+    processingTime: Date.now() - startTime
+  };
+}
+
+export { extractFeatures, calculatePhishingScore, generateReasons, analyzeUrl, analyzeUrlEnsemble };
+export default { analyzeUrl, analyzeUrlEnsemble, extractFeatures, calculatePhishingScore };

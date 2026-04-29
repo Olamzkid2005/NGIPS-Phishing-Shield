@@ -1,24 +1,37 @@
 /**
  * Statistics Route - GET /v1/stats
+ * Returns real-time model monitoring statistics
  */
+
+import { monitor } from '../utils/monitoring.js';
 
 /**
  * GET /v1/stats - Get aggregate statistics
  */
 export async function getStatsHandler(req, res) {
-  // Stats will be calculated from in-memory store in server.js
-  // For now, return empty stats
+  const monitorStats = monitor.getStats();
+
   return res.json({
-    totalScans: 0,
-    blockedCount: 0,
-    allowedCount: 0,
-    blockRate: 0,
-    threatLevelDistribution: { low: 0, medium: 0, high: 0, critical: 0 },
-    avgConfidence: 0,
-    recentScansLast24h: 0,
-    totalFeedback: 0,
-    falsePositiveReports: 0,
-    falsePositiveRate: 0,
+    totalScans: monitorStats.totalPredictions,
+    blockedCount: monitorStats.phishingCount,
+    allowedCount: monitorStats.legitimateCount,
+    blockRate: monitorStats.phishingRate,
+    threatLevelDistribution: {
+      low: monitorStats.confidenceDistribution[0] + monitorStats.confidenceDistribution[1],
+      medium: monitorStats.confidenceDistribution[2],
+      high: monitorStats.confidenceDistribution[3],
+      critical: monitorStats.confidenceDistribution[4]
+    },
+    avgConfidence: monitorStats.avgConfidence,
+    mlModelStatus: {
+      status: 'loaded',
+      version: '1.0.0',
+      available: ['Heuristic']
+    },
+    latencyPercentiles: monitorStats.latency,
+    driftStatus: monitorStats.drift,
+    recentAlerts: monitorStats.recentAlerts,
+    confidenceDistribution: monitorStats.confidenceDistribution,
     timestamp: new Date().toISOString()
   });
 }

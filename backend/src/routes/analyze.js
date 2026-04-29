@@ -4,10 +4,11 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { analyzeUrl } from '../utils/featureExtraction.js';
+import { analyzeUrlEnsemble } from '../utils/featureExtraction.js';
+import { monitor } from '../utils/monitoring.js';
 
 // In-memory scan history (replace with database in production)
-const scanHistory = new Map();
+export const scanHistory = new Map();
 
 /**
  * Store scan result
@@ -62,7 +63,7 @@ export async function analyzeUrlHandler(req, res) {
   }
   
   try {
-    const result = analyzeUrl(url);
+    const result = await analyzeUrlEnsemble(url);
     
     if (!result.isValid) {
       return res.status(400).json({
@@ -89,7 +90,11 @@ export async function analyzeUrlHandler(req, res) {
       reasons: scan.reasons,
       modelVersion: scan.modelVersion,
       processingTime: scan.processingTime,
-      timestamp: scan.timestamp
+      timestamp: scan.timestamp,
+      mlConfidence: result.mlConfidence,
+      heuristicConfidence: result.heuristicConfidence,
+      modelScores: result.modelScores,
+      mlAvailable: result.mlAvailable
     });
     
   } catch (error) {
@@ -155,7 +160,7 @@ export async function submitFeedbackHandler(req, res) {
     });
   }
   
-  // For now, just acknowledge (would store in database)
+  const scan = scanHistory.get(scanId);
   const feedback = {
     id: `fb_${uuidv4().slice(0, 8)}`,
     scanId,
@@ -164,7 +169,18 @@ export async function submitFeedbackHandler(req, res) {
     status: 'pending',
     timestamp: new Date().toISOString()
   };
-  
+
+  if (scan) {
+    scan.feedbackCorrect = isFalsePositive ? 0 : 1;
+    monitor.alerts.push({
+      type: 'FEEDBACK_RECEIVED',
+      scanId,
+      isFalsePositive,
+      timestamp: Date.now(),
+      message: isFalsePositive ? `False positive reported for ${scan.url}` : `Positive feedback for ${scan.url}`
+    });
+  }
+
   return res.status(201).json(feedback);
 }
 

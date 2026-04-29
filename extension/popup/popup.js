@@ -7,8 +7,78 @@ document.addEventListener('DOMContentLoaded', async () => {
     whitelistInput: document.getElementById('whitelist-input'),
     addWhitelistBtn: document.getElementById('add-whitelist-btn'),
     whitelistList: document.getElementById('whitelist-list'),
-    whitelistCount: document.getElementById('whitelist-count')
+    whitelistCount: document.getElementById('whitelist-count'),
+    threatBadge: document.getElementById('threat-badge'),
+    threatDetails: document.getElementById('threat-details'),
+    scanBtn: document.getElementById('scan-btn'),
+    mlStatus: document.getElementById('ml-status')
   };
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async function checkCurrentPageThreat() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || !tab.url) return;
+
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'CHECK_URL', url: tab.url });
+      updateThreatDisplay(response);
+    } catch (error) {
+      console.error('Failed to check page threat:', error);
+      updateThreatDisplay({ is_phishing: false, confidence: 0, threat_level: 'low', reasons: [] });
+    }
+  }
+
+  function updateThreatDisplay(result) {
+    const badge = elements.threatBadge;
+    const details = elements.threatDetails;
+
+    if (!badge || !details) return;
+
+    if (result.is_phishing) {
+      badge.textContent = (result.threat_level || 'high').toUpperCase();
+      badge.className = `threat-status-badge ${result.threat_level || 'high'}`;
+      const reasons = result.reasons || [];
+      details.innerHTML = `
+        <div class="threat-warning">
+          <span class="warning-icon">⚠️</span>
+          <span>Phishing detected</span>
+        </div>
+        <div class="red-flags-mini">
+          ${reasons.slice(0, 3).map(r => `<div class="mini-flag">${escapeHtml(r)}</div>`).join('')}
+        </div>
+      `;
+    } else {
+      badge.textContent = 'Safe';
+      badge.className = 'threat-status-badge safe';
+      details.innerHTML = `
+        <div class="safe-state">
+          <span class="safe-icon">✓</span>
+          <span>No threats detected</span>
+        </div>
+      `;
+    }
+  }
+
+  async function scanCurrentPage() {
+    elements.scanBtn.disabled = true;
+    elements.scanBtn.textContent = 'Scanning...';
+
+    try {
+      await checkCurrentPageThreat();
+    } finally {
+      elements.scanBtn.disabled = false;
+      elements.scanBtn.textContent = 'Scan Current Page';
+    }
+  }
+
+  if (elements.scanBtn) {
+    elements.scanBtn.addEventListener('click', scanCurrentPage);
+  }
 
   async function loadStats() {
     try {
@@ -68,12 +138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
   elements.enableToggle.addEventListener('change', async () => {
     const enabled = elements.enableToggle.checked;
     await chrome.runtime.sendMessage({
@@ -106,4 +170,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadStats();
   await loadSettings();
   await loadWhitelist();
+  await checkCurrentPageThreat();
 });

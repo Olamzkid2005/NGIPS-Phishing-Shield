@@ -31,8 +31,29 @@ function injectOverlay(data) {
           <span class="detail-value">${((data.confidence || 0) * 100).toFixed(1)}%</span>
         </div>
       </div>
+      <div class="red-flags-section">
+        <h3>Red Flags Detected:</h3>
+        <ul class="red-flags-list">
+          ${(data.redFlags || []).map(flag => `
+            <li class="red-flag-item">
+              <span class="red-flag-icon">⚠️</span>
+              <span class="red-flag-text">${escapeHtml(flag)}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+      <div class="threat-level-badge ${data.threatLevel || 'high'}">
+        ${(data.threatLevel || 'high').toUpperCase()} THREAT
+      </div>
+      <div class="confidence-section">
+        <div class="confidence-label">ML Confidence: ${((data.mlConfidence || data.confidence || 0) * 100).toFixed(1)}%</div>
+        <div class="confidence-bar">
+          <div class="confidence-fill" style="width: ${((data.mlConfidence || data.confidence || 0) * 100).toFixed(1)}%"></div>
+        </div>
+      </div>
       <div class="phishing-warning-actions">
         <button id="go-back-btn" class="warning-btn secondary">Go Back</button>
+        <button id="report-fp-btn" class="warning-btn secondary">Report False Positive</button>
         <button id="proceed-anyway-btn" class="warning-btn primary">Proceed Anyway</button>
       </div>
       <p class="phishing-warning-disclaimer">
@@ -47,10 +68,29 @@ function injectOverlay(data) {
   document.getElementById('go-back-btn').addEventListener('click', () => {
     window.history.back();
   });
-  
+
   document.getElementById('proceed-anyway-btn').addEventListener('click', () => {
     overlay.remove();
     overlayInjected = false;
+  });
+
+  document.getElementById('report-fp-btn').addEventListener('click', () => {
+    chrome.runtime.sendMessage({
+      type: 'REPORT_FALSE_POSITIVE',
+      url: data.url,
+      threatType: data.threatType,
+      confidence: data.confidence
+    }, (response) => {
+      const btn = document.getElementById('report-fp-btn');
+      if (response && response.success) {
+        btn.textContent = 'Reported - Thank You';
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+      } else {
+        btn.textContent = 'Report Failed - Retry';
+        setTimeout(() => { btn.textContent = 'Report False Positive'; }, 2000);
+      }
+    });
   });
 }
 
@@ -73,7 +113,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     injectOverlay({
       url: message.url,
       threatType: message.threatType,
-      confidence: message.confidence
+      confidence: message.confidence,
+      mlConfidence: message.mlConfidence,
+      threatLevel: message.threatLevel,
+      redFlags: message.redFlags
     });
     sendResponse({ success: true });
   }

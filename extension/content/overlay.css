@@ -28,9 +28,16 @@
   margin: 0 auto 24px;
 }
 
+@keyframes warning-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 .phishing-warning-icon svg {
   width: 100%;
   height: 100%;
+  animation: warning-pulse 2s ease-in-out infinite;
 }
 
 .phishing-warning-title {
@@ -131,6 +138,118 @@
   font-style: italic;
 }
 
+.red-flags-section {
+  background: #fff3e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.red-flags-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e65100;
+  margin: 0 0 10px;
+}
+
+.red-flags-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.red-flag-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #ffe0b2;
+}
+
+.red-flag-item:last-child {
+  border-bottom: none;
+}
+
+.red-flag-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.red-flag-text {
+  font-size: 13px;
+  color: #424242;
+  line-height: 1.4;
+}
+
+.threat-level-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  color: white;
+}
+
+.threat-level-badge.low {
+  background: #4caf50;
+}
+
+.threat-level-badge.medium {
+  background: #ff9800;
+}
+
+.threat-level-badge.high {
+  background: #f44336;
+}
+
+.threat-level-badge.critical {
+  background: #d32f2f;
+}
+
+.confidence-section {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.confidence-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #616161;
+  margin-bottom: 8px;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+  background: linear-gradient(90deg, #4caf50 0%, #ff9800 50%, #f44336 100%);
+}
+
+.report-fp-btn {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.report-fp-btn:hover {
+  background: #bbdefb;
+}
+
+.report-fp-btn:disabled {
+  cursor: not-allowed;
+}
+
 @media (prefers-color-scheme: dark) {
   #phishing-warning-overlay {
     background: linear-gradient(135deg, #0d0d1a 0%, #0a1628 50%, #0a1a30 100%);
@@ -167,6 +286,39 @@
   
   .warning-btn.secondary:hover {
     background: #616161;
+  }
+
+  .red-flags-section {
+    background: #3e2723;
+  }
+
+  .red-flags-section h3 {
+    color: #ffab91;
+  }
+
+  .red-flag-item {
+    border-bottom-color: #4e342e;
+  }
+
+  .red-flag-text {
+    color: #e0e0e0;
+  }
+
+  .confidence-label {
+    color: #9e9e9e;
+  }
+
+  .confidence-bar {
+    background: #424242;
+  }
+
+  .report-fp-btn {
+    background: #1a237e;
+    color: #90caf9;
+  }
+
+  .report-fp-btn:hover {
+    background: #283593;
   }
 }
 

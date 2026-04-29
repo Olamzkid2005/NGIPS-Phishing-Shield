@@ -48,7 +48,9 @@ async function analyzeUrlWithRetry(url, retryCount = 0) {
     return {
       is_phishing: data.action === 'block',
       confidence: data.confidence || 0,
+      ml_confidence: data.mlConfidence || 0,
       threat_type: data.threatLevel || 'none',
+      threat_level: data.threatLevel || 'low',
       reasons: data.reasons || []
     };
   } catch (error) {
@@ -164,7 +166,11 @@ async function updateStats(blocked) {
       } else {
         currentStats.allowedCount++;
       }
-      chrome.storage.local.set({ stats: currentStats }, () => resolve(currentStats));
+      chrome.storage.local.set({ stats: currentStats }, () => {
+        chrome.action.setBadgeText({ text: currentStats.blockedCount.toString() });
+        chrome.action.setBadgeBackgroundColor({ color: '#d32f2f' });
+        resolve(currentStats);
+      });
     });
   });
 }
@@ -184,13 +190,16 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     await updateStats(true);
     
     chrome.tabs.update(details.tabId, { url: 'blocked.html' });
-    
+
     const tab = await chrome.tabs.get(details.tabId);
     chrome.tabs.sendMessage(details.tabId, {
       type: 'BLOCK_WARNING',
       url: url,
       threatType: result.threat_type,
-      confidence: result.confidence
+      confidence: result.confidence,
+      mlConfidence: result.ml_confidence,
+      threatLevel: result.threat_level,
+      redFlags: result.reasons
     });
   } else {
     await updateStats(false);
@@ -230,6 +239,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.type === 'UPDATE_SETTINGS') {
     chrome.storage.local.set({ settings: message.settings }, () => sendResponse(true));
+    return true;
+  }
+
+  if (message.type === 'REPORT_FALSE_POSITIVE') {
+    console.log('False positive reported:', message.url);
+    sendResponse({ success: true });
     return true;
   }
 });
