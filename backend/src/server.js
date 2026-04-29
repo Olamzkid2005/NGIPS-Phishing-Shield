@@ -11,8 +11,12 @@ import { createRequire } from 'module';
 import { timingSafeEqual } from 'crypto';
 
 // Import routes
-import { analyzeUrlHandler, getScansHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
+import { analyzeUrlHandler, getScansHandler, getScanByIdHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
 import { getStatsHandler } from './routes/stats.js';
+import { getTrendsHandler, getTopDomainsHandler, getThreatClassificationHandler } from './routes/analytics.js';
+import { getAllFeedbackHandler, updateFeedbackHandler } from './routes/feedback.js';
+import { getSettingsHandler, updateSettingsHandler } from './routes/settings.js';
+import { loginHandler, refreshHandler, logoutHandler, meHandler } from './routes/auth.js';
 
 // Import ML inference
 import { loadModels, getMLStatus } from './utils/mlInference.js';
@@ -118,8 +122,28 @@ app.get('/', (req, res) => {
 // API Routes
 app.post('/v1/analyze', (req, res, next) => analyzeUrlHandler(req, res).catch(next));
 app.get('/v1/scans', (req, res, next) => getScansHandler(req, res).catch(next));
+app.get('/v1/scans/:id', (req, res, next) => getScanByIdHandler(req, res).catch(next));
 app.post('/v1/feedback', (req, res, next) => submitFeedbackHandler(req, res).catch(next));
 app.get('/v1/stats', (req, res, next) => getStatsHandler(req, res).catch(next));
+
+// Feedback admin routes
+app.get('/v1/feedback', (req, res, next) => getAllFeedbackHandler(req, res).catch(next));
+app.patch('/v1/feedback/:id/status', (req, res, next) => updateFeedbackHandler(req, res).catch(next));
+
+// Analytics routes
+app.get('/v1/analytics/trends', (req, res, next) => getTrendsHandler(req, res).catch(next));
+app.get('/v1/analytics/top-domains', (req, res, next) => getTopDomainsHandler(req, res).catch(next));
+app.get('/v1/analytics/threats', (req, res, next) => getThreatClassificationHandler(req, res).catch(next));
+
+// Settings routes
+app.get('/v1/settings', (req, res, next) => getSettingsHandler(req, res).catch(next));
+app.patch('/v1/settings', (req, res, next) => updateSettingsHandler(req, res).catch(next));
+
+// Auth routes
+app.post('/v1/auth/login', (req, res, next) => loginHandler(req, res).catch(next));
+app.post('/v1/auth/refresh', (req, res, next) => refreshHandler(req, res).catch(next));
+app.post('/v1/auth/logout', (req, res, next) => logoutHandler(req, res).catch(next));
+app.get('/v1/auth/me', (req, res, next) => meHandler(req, res).catch(next));
 
 // Admin Routes - Model Monitoring & Retraining
 

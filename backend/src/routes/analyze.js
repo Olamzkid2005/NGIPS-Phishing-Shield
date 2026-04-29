@@ -153,6 +153,25 @@ export async function getScansHandler(req, res) {
 }
 
 /**
+ * GET /v1/scans/:id - Get single scan by ID
+ */
+export async function getScanByIdHandler(req, res) {
+  const { id } = req.params;
+  const scan = scanHistory.get(id);
+
+  if (!scan) {
+    return res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Scan not found'
+      }
+    });
+  }
+
+  return res.json(scan);
+}
+
+/**
  * POST /v1/feedback - Submit feedback on scan
  */
 export async function submitFeedbackHandler(req, res) {
@@ -208,5 +227,6 @@ export async function submitFeedbackHandler(req, res) {
 export default {
   analyzeUrlHandler,
   getScansHandler,
+  getScanByIdHandler,
   submitFeedbackHandler
 };
