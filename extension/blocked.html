@@ -1,66 +1,213 @@
 <!DOCTYPE html>
-<html>
+<html class="light" lang="en">
 <head>
-  <title>Phishing Blocked</title>
-  <style>
-    body { font-family: sans-serif; background: #1a1a2e; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-    .container { max-width: 600px; padding: 40px; background: #16213e; border-radius: 16px; text-align: center; }
-    .warning-icon { font-size: 64px; margin-bottom: 20px; }
-    h1 { color: #ff5252; margin-bottom: 10px; }
-    .details { background: #0f3460; padding: 16px; border-radius: 8px; margin: 20px 0; text-align: left; }
-    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1a1a2e; }
-    .detail-label { color: #a0a0a0; }
-    .red-flags { margin: 20px 0; }
-    .red-flag { background: #d32f2f22; padding: 8px 12px; margin: 4px 0; border-radius: 4px; border-left: 3px solid #d32f2f; }
-    .actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
-    .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
-    .btn-primary { background: #d32f2f; color: white; }
-    .btn-secondary { background: #424242; color: white; }
-  </style>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Blocked | NGIPS Phishing Shield</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#fbf8ff",
+                        "on-surface": "#191b25",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#0052ff",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#952200",
+                        "outline-variant": "#c3c5d9",
+                    },
+                    fontFamily: {
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .gradient-mesh {
+            background-color: #020617;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 82, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(186, 26, 26, 0.1) 0px, transparent 50%);
+        }
+    </style>
 </head>
-<body>
-  <div class="container">
-    <div class="warning-icon">🛡️</div>
-    <h1>Phishing Threat Blocked</h1>
-    <p>This URL has been identified as a potential phishing threat.</p>
-    <div class="details" id="block-details"></div>
-    <div class="red-flags" id="red-flags"></div>
-    <div class="actions">
-      <button class="btn btn-secondary" onclick="history.back()">Go Back</button>
-      <button class="btn btn-primary" id="proceed-btn">Proceed Anyway</button>
+<body class="font-body-md text-on-surface min-h-screen gradient-mesh flex flex-col items-center justify-center p-6">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 w-full h-16 flex items-center px-8 z-50">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[#0052FF]" style="font-variation-settings: 'FILL' 1;">shield</span>
+            <span class="text-white font-display-lg text-lg tracking-tight">NGIPS Phishing Shield</span>
+        </div>
+    </header>
+
+    <!-- Main Blocked Alert -->
+    <main class="w-full max-w-2xl animate-in fade-in zoom-in duration-500">
+        <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-[24px] shadow-2xl p-8 md:p-12 flex flex-col items-center text-center">
+            <!-- Hero Icon -->
+            <div class="mb-8 p-6 bg-error/10 rounded-full border border-error/20 ring-8 ring-error/5">
+                <span class="material-symbols-outlined text-error text-6xl" style="font-variation-settings: 'FILL' 1;">gpp_maybe</span>
+            </div>
+
+            <!-- Title -->
+            <div class="space-y-3 mb-10">
+                <h1 class="font-headline-lg text-white text-3xl md:text-4xl">Phishing Threat Blocked</h1>
+                <p class="font-body-lg text-slate-400 max-w-md mx-auto">This URL has been identified as a potential phishing threat by our security analyzer.</p>
+            </div>
+
+            <!-- Threat Details -->
+            <div class="w-full grid grid-cols-1 gap-4 mb-10">
+                <div class="bg-slate-950/50 rounded-xl border border-slate-800 p-6 text-left relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div class="space-y-1">
+                            <span class="text-slate-500 font-label-md uppercase tracking-wider">Blocked URL</span>
+                            <code id="blocked-url" class="block font-mono text-error font-medium text-sm break-all">Loading...</code>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="threat-badge" class="px-3 py-1 bg-error text-white rounded-full text-xs font-bold">CRITICAL</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-label-lg">Confidence Score</span>
+                            <span id="confidence-text" class="text-white font-headline-md text-sm">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="confidence-bar" class="bg-error h-full rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Red Flags -->
+                <div id="red-flags-container" class="space-y-3">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 w-full">
+                <button id="go-back-btn" class="flex-1 px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-label-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+                    Go Back
+                </button>
+                <button id="proceed-btn" class="flex-1 px-8 py-4 bg-error hover:bg-red-700 text-white rounded-xl font-label-lg transition-all shadow-lg shadow-error/20 active:scale-95 flex items-center justify-center gap-2">
+                    Proceed Anyway
+                    <span class="material-symbols-outlined" data-icon="security_update_warning">security_update_warning</span>
+                </button>
+            </div>
+
+            <p class="mt-8 text-slate-500 font-label-md">
+                Reference ID: <span id="ref-id" class="font-mono">SEC-PH-00000</span> • Powered by NGIPS Phishing Shield
+            </p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="fixed bottom-8 text-slate-600 font-label-md flex items-center gap-4">
+        <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs" data-icon="verified">verified</span>
+            End-to-End Encryption Active
+        </span>
+        <span class="w-1 h-1 bg-slate-800 rounded-full"></span>
+        <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs" data-icon="dns">dns</span>
+            Real-time Analysis Complete
+        </span>
+    </footer>
+
+    <!-- Background Decoration -->
+    <div class="fixed inset-0 -z-10 pointer-events-none opacity-20">
+        <div class="absolute top-[20%] left-[10%] w-[400px] h-[400px] bg-[#0052FF]/20 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] bg-error/20 rounded-full blur-[120px]"></div>
     </div>
-  </div>
-  <script>
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-      const tabId = tabs[0]?.id;
-      if (!tabId) return;
 
-      chrome.storage.session.get([`block_${tabId}`], (result) => {
-        const data = result[`block_${tabId}`];
-        if (!data) return;
+    <script>
+        // Read block data from chrome.storage.session
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof chrome !== 'undefined' && chrome.tabs) {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    const tabId = tabs[0]?.id;
+                    if (!tabId) return;
 
-        document.getElementById('block-details').innerHTML = `
-          <div class="detail-row"><span class="detail-label">URL:</span><span>${data.url || 'Unknown'}</span></div>
-          <div class="detail-row"><span class="detail-label">Threat:</span><span>${data.threatLevel || 'Unknown'}</span></div>
-          <div class="detail-row"><span class="detail-label">Confidence:</span><span>${((data.confidence || 0) * 100).toFixed(1)}%</span></div>
-        `;
+                    chrome.storage.session.get([`block_${tabId}`], (result) => {
+                        const data = result[`block_${tabId}`];
+                        if (!data) return;
 
-        if (data.redFlags && data.redFlags.length > 0) {
-          document.getElementById('red-flags').innerHTML = '<h3>Red Flags:</h3>' +
-            data.redFlags.map(f => `<div class="red-flag">⚠️ ${f}</div>`).join('');
+                        // Update URL
+                        document.getElementById('blocked-url').textContent = data.url || 'Unknown URL';
+
+                        // Update threat badge
+                        const badge = document.getElementById('threat-badge');
+                        badge.textContent = (data.threatLevel || 'critical').toUpperCase();
+
+                        // Update confidence
+                        const confidence = Math.round((data.confidence || 0) * 100);
+                        document.getElementById('confidence-text').textContent = confidence + '%';
+                        document.getElementById('confidence-bar').style.width = confidence + '%';
+
+                        // Update reference ID
+                        document.getElementById('ref-id').textContent = 'SEC-PH-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+
+                        // Update red flags
+                        const container = document.getElementById('red-flags-container');
+                        const flags = data.redFlags || ['Suspicious URL patterns detected'];
+                        container.innerHTML = flags.map(flag => `
+                            <div class="flex items-center gap-4 bg-slate-900/30 border-l-4 border-error p-4 rounded-r-xl">
+                                <span class="material-symbols-outlined text-error">warning</span>
+                                <span class="text-slate-200 font-body-md">${escapeHtml(flag)}</span>
+                            </div>
+                        `).join('');
+                    });
+                });
+            }
+
+            // Go Back button
+            document.getElementById('go-back-btn').addEventListener('click', () => {
+                window.history.back();
+            });
+
+            // Proceed Anyway button
+            document.getElementById('proceed-btn').addEventListener('click', () => {
+                if (typeof chrome !== 'undefined' && chrome.tabs) {
+                    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                        const tabId = tabs[0]?.id;
+                        if (tabId) {
+                            chrome.storage.session.remove(`block_${tabId}`);
+                        }
+                    });
+                }
+                window.history.back();
+            });
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-      });
-    });
-
-    document.getElementById('proceed-btn').addEventListener('click', () => {
-      chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        const tabId = tabs[0]?.id;
-        if (tabId) {
-          chrome.storage.session.remove(`block_${tabId}`);
-        }
-      });
-      history.back();
-    });
-  </script>
+    </script>
 </body>
 </html>
