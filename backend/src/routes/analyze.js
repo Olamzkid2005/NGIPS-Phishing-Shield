@@ -3,7 +3,7 @@
  * POST /v1/analyze
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import { analyzeUrlEnsemble } from '../utils/featureExtraction.js';
 import { monitor } from '../utils/monitoring.js';
 import { createFeedback } from '../utils/feedbackRepository.js';
@@ -16,7 +16,7 @@ export const scanHistory = new Map();
  */
 function storeScan(result) {
   const scan = {
-    id: result.id || `scan_${uuidv4().slice(0, 8)}`,
+    id: result.id || `scan_${crypto.randomUUID().slice(0, 8)}`,
     url: result.url,
     action: result.action,
     confidence: result.confidence,
@@ -77,7 +77,7 @@ export async function analyzeUrlHandler(req, res) {
     
     // Store scan
     const scan = storeScan({
-      id: `scan_${uuidv4().slice(0, 8)}`,
+      id: `scan_${crypto.randomUUID().slice(0, 8)}`,
       ...result
     });
 
