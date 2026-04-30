@@ -34,10 +34,11 @@ export async function updateSettingsHandler(req, res) {
   }
   
   if (refreshInterval !== undefined) {
-    if (typeof refreshInterval !== 'number' || refreshInterval < 5 || refreshInterval > 300) {
+    const numInterval = Number(refreshInterval);
+    if (isNaN(numInterval) || numInterval < 5 || numInterval > 300) {
       throw new ValidationError('refreshInterval must be a number between 5 and 300');
     }
-    settings.refreshInterval = refreshInterval;
+    settings.refreshInterval = numInterval;
   }
   
   if (notifications !== undefined) {

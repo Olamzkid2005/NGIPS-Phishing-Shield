@@ -49,6 +49,6 @@ export async function updateFeedbackHandler(req, res) {
     isFalsePositive: feedback.isFalsePositive,
     userComment: feedback.userComment,
     status: feedback.status,
-    timestamp: feedback.createdAt
+    timestamp: feedback.createdAt || feedback.timestamp || new Date().toISOString()
   });
 }

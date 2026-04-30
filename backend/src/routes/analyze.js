@@ -45,7 +45,7 @@ function storeScan(result) {
  * POST /v1/analyze - Analyze URL for phishing
  */
 export async function analyzeUrlHandler(req, res) {
-  const { url, timestamp, extensionVersion } = req.body;
+  const { url } = req.body;
   
   // Validate URL
   if (!url || typeof url !== 'string' || url.trim().length === 0) {
