@@ -29,6 +29,9 @@ import { loadModels, getMLStatus } from './utils/mlInference.js';
 import { monitor } from './utils/monitoring.js';
 import { triggerRetrain, evaluateModel } from './utils/retrain.js';
 
+// Import logger
+import logger from './utils/logger.js';
+
 const require = createRequire(import.meta.url);
 const { version } = require('../package.json');
 
@@ -95,9 +98,25 @@ const loginLimiter = rateLimit({
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`, { method: req.method, path: req.path });
   next();
 });
+
+// Extension API key validation (additional security layer)
+function validateExtensionKey(req, res, next) {
+  const extensionKey = req.headers['x-extension-key'];
+  const validKey = process.env.EXTENSION_API_KEY;
+
+  if (validKey) {
+    if (!extensionKey || extensionKey !== validKey) {
+      return res.status(401).json({
+        error: { code: 'INVALID_EXTENSION_KEY', message: 'Invalid or missing extension API key' }
+      });
+    }
+  }
+
+  next();
+}
 
 // Admin API key auth middleware (timing-safe comparison)
 function adminAuth(req, res, next) {
@@ -161,6 +180,12 @@ app.get('/', (req, res) => {
 // Extension auth bypass (check for extension origin, test env, or API key)
 function extensionOrAuth(req, res, next) {
   if (process.env.NODE_ENV === 'test') return next();
+
+  // Validate extension key if configured
+  if (process.env.EXTENSION_API_KEY) {
+    return validateExtensionKey(req, res, next);
+  }
+
   const origin = req.headers.origin || '';
   const extensionId = process.env.EXTENSION_ID || '';
   if (extensionId && origin === `chrome-extension://${extensionId}`) return next();
@@ -209,7 +234,7 @@ app.post('/v1/admin/retrain', adminAuth, async (req, res) => {
     }
     return res.status(500).json({ error: { code: 'RETRAIN_FAILED', ...result } });
   } catch (error) {
-    console.error('Retrain error:', error);
+    logger.error('Retrain error', { error: error.message });
     return res.status(500).json({
       error: { code: 'RETRAIN_ERROR', message: error.message }
     });
@@ -252,7 +277,7 @@ app.post('/v1/admin/evaluate', adminAuth, async (req, res) => {
     }
     return res.status(500).json({ error: { code: 'EVALUATION_FAILED', ...result } });
   } catch (error) {
-    console.error('Evaluation error:', error);
+    logger.error('Evaluation error', { error: error.message });
     return res.status(500).json({
       error: { code: 'EVALUATION_ERROR', message: error.message }
     });
@@ -278,18 +303,12 @@ async function startServer() {
   await loadModels();
 
   if (!process.env.ADMIN_API_KEY) {
-    console.warn('[SERVER] WARNING: ADMIN_API_KEY not set. Admin endpoints will be inaccessible.');
+    logger.warn('ADMIN_API_KEY not set. Admin endpoints will be inaccessible.');
   }
 
   app.listen(PORT, () => {
     const mlStatus = getMLStatus();
-    console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║   NGIPS Phishing Shield API - Started                  ║
-║   http://localhost:${PORT}                         ║
-║   ML Models: ${mlStatus.loaded ? `${mlStatus.method} loaded` : 'unavailable (heuristic only)'}               ║
-╚═══════════════════════════════════════════════════════════╝
-    `);
+    logger.info('NGIPS Phishing Shield API started', { port: PORT, mlStatus: mlStatus.loaded ? mlStatus.method : 'unavailable' });
   });
 }
 
