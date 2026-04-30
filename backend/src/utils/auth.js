@@ -7,10 +7,18 @@ import crypto from 'crypto';
 
 // Configuration constants (should be in environment variables)
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Fail fast in production if JWT_SECRET not set
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('FATAL: JWT_SECRET environment variable is required in production');
+}
+
+// Use fallback only in development
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || crypto.randomBytes(32).toString('hex');
+
 if (!JWT_SECRET) {
   console.warn('[AUTH] WARNING: JWT_SECRET not set. Using generated secret (tokens will not persist across restarts).');
 }
-const EFFECTIVE_JWT_SECRET = JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const JWT_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '7d'; // 7 days
 

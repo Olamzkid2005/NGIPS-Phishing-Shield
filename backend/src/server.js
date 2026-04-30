@@ -37,15 +37,30 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 // Middleware
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:8000',
+  'https://localhost:3000',
+  'https://localhost:5173',
+  'https://localhost:8000'
+];
+
 app.use(helmet());
 app.use(cors({
   origin: function(origin, callback) {
+    if (process.env.NODE_ENV === 'production' && !origin) {
+      return callback(new Error('CORS: Origin required'), false);
+    }
+
     if (!origin) return callback(null, true);
     if (origin.startsWith('chrome-extension://')) return callback(null, true);
-    if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -62,6 +77,21 @@ const limiter = rateLimit({
   }
 });
 app.use('/v1/', limiter);
+
+// Login-specific rate limiter
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {
+    error: {
+      code: 'LOGIN_LIMIT_EXCEEDED',
+      message: 'Too many login attempts. Please try again later.'
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.body?.email || req.ip
+});
 
 // Request logging
 app.use((req, res, next) => {
@@ -163,7 +193,7 @@ app.get('/v1/settings', (req, res, next) => getSettingsHandler(req, res).catch(n
 app.patch('/v1/settings', (req, res, next) => updateSettingsHandler(req, res).catch(next));
 
 // Auth routes
-app.post('/v1/auth/login', (req, res, next) => loginHandler(req, res).catch(next));
+app.post('/v1/auth/login', loginLimiter, (req, res, next) => loginHandler(req, res).catch(next));
 app.post('/v1/auth/refresh', (req, res, next) => refreshHandler(req, res).catch(next));
 app.post('/v1/auth/logout', (req, res, next) => logoutHandler(req, res).catch(next));
 app.get('/v1/auth/me', (req, res, next) => meHandler(req, res).catch(next));

@@ -12,6 +12,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ML_SERVICE_DIR = path.join(__dirname, '../../../ml-service');
 const PREDICT_SCRIPT = path.join(ML_SERVICE_DIR, 'predict.py');
 
+function isValidUrlForShell(url) {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9:.\/\-\_]+$/.test(url)) {
+    return false;
+  }
+  const dangerous = /[;&|`$<>]/;
+  if (dangerous.test(url)) {
+    return false;
+  }
+  return true;
+}
+
 let modelLoadError = null;
 let modelsAvailable = false;
 
@@ -67,6 +78,11 @@ export async function loadModels() {
  */
 export async function predictPhishing(url) {
   if (!modelsAvailable) {
+    return null;
+  }
+
+  if (!isValidUrlForShell(url)) {
+    console.error('[ML] Invalid URL for processing:', url.substring(0, 50));
     return null;
   }
 
