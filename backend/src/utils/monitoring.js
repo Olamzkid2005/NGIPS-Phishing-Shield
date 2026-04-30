@@ -74,8 +74,8 @@ class ModelMonitor {
           message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
         });
       }
-      if (this.alerts.length > 1000) {
-        this.alerts = this.alerts.slice(-500);
+      if (this.alerts.length >= 500) {
+        this.alerts = this.alerts.slice(-250);
       }
     }
 

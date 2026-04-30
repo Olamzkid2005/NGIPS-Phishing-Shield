@@ -31,8 +31,11 @@ function storeScan(result) {
   
   // Keep only last 1000 scans in memory
   if (scanHistory.size > 1000) {
-    const firstKey = scanHistory.keys().next().value;
-    scanHistory.delete(firstKey);
+    const sorted = [...scanHistory.entries()].sort((a, b) => 
+      new Date(a[1].timestamp) - new Date(b[1].timestamp)
+    );
+    scanHistory.clear();
+    sorted.slice(-1000).forEach(([k, v]) => scanHistory.set(k, v));
   }
   
   return scan;
@@ -132,7 +135,7 @@ export async function getScansHandler(req, res) {
   
   // Filter by URL contains (sanitized)
   if (url_contains) {
-    const sanitized = url_contains.replace(/[<>"']/g, '');
+    const sanitized = url_contains.replace(/[<>"'`]/g, '');
     scans = scans.filter(s => s.url.toLowerCase().includes(sanitized.toLowerCase()));
   }
   

@@ -103,7 +103,7 @@ export async function refreshHandler(req, res) {
   // Delete used token (rotation)
   deleteRefreshToken(refreshToken);
   
-  const userId = typeof stored === 'string' ? stored : stored.userId || 'user';
+  const userId = stored?.userId;
   const user = findUserById(userId);
   const role = user?.role || 'user';
   

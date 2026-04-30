@@ -70,8 +70,12 @@ function injectOverlay(data) {
   });
 
   document.getElementById('proceed-anyway-btn').addEventListener('click', () => {
-    const domain = new URL(data.url).hostname;
-    chrome.runtime.sendMessage({ type: 'ADD_TO_WHITELIST', domain });
+    try {
+      const domain = new URL(data.url).hostname;
+      chrome.runtime.sendMessage({ type: 'ADD_TO_WHITELIST', domain });
+    } catch (e) {
+      console.error('Invalid URL for whitelist:', e);
+    }
     overlay.remove();
     overlayInjected = false;
   });
