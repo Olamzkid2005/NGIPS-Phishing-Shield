@@ -113,7 +113,7 @@ export function generateRefreshToken(userId) {
   
   refreshTokens.set(token, refreshToken);
   
-  // TODO: Persist to database when available:
+  // TODO(tech-debt): Persist refresh tokens to database - in-memory only for dev
   // await prisma.refreshToken.create({ data: refreshToken });
   
   return token;
@@ -126,7 +126,7 @@ export function getRefreshToken(token) {
   const stored = refreshTokens.get(token);
   
   if (!stored) {
-    // TODO: Check database when available
+    // TODO(tech-debt): Check database when available
     return null;
   }
   
@@ -147,7 +147,7 @@ export function revokeRefreshToken(token) {
     stored.revoked = true;
     refreshTokens.set(token, stored);
     
-    // TODO: Update in database:
+    // TODO(tech-debt): Update in database:
     // await prisma.refreshToken.update({ where: { token }, data: { revoked: true } });
   }
 }

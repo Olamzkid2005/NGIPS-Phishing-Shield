@@ -1,9 +1,12 @@
 let API_BASE_URL = 'http://localhost:8000';
 const API_PREFIX = '/v1';
+
+// Constants
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_BLOCKED_THRESHOLD = 0.7;
 const API_TIMEOUT_MS = 5000;
 const MAX_RETRIES = 3;
+const URL_MAX_LENGTH = 2048;
 
 const urlCache = new Map();
 const stats = {
@@ -88,7 +91,7 @@ function isWhitelisted(url, whitelist) {
 
 function isValidUrl(url) {
   if (!url || typeof url !== 'string') return false;
-  if (url.length > 2048) return false;
+  if (url.length > URL_MAX_LENGTH) return false;
   return /^https?:\/\//i.test(url);
 }
 

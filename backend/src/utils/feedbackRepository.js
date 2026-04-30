@@ -26,7 +26,7 @@ export async function createFeedback(data) {
   
   feedbackStore.set(feedback.id, feedback);
   
-  // TODO: When Prisma is available, persist to database:
+  // TODO(tech-debt): When Prisma is available, persist to database:
   // await prisma.feedback.create({ data: feedback });
   
   return feedback;
@@ -39,7 +39,7 @@ export async function getFeedbackById(id) {
   const feedback = feedbackStore.get(id);
   
   if (!feedback) {
-    // TODO: Try database when available:
+    // TODO(tech-debt): Try database when available:
     // const feedback = await prisma.feedback.findUnique({ where: { id } });
     throw new NotFoundError('Feedback not found');
   }
@@ -54,7 +54,7 @@ export async function getFeedbackByScanId(scanId) {
   const feedbacks = Array.from(feedbackStore.values())
     .filter(f => f.scanId === scanId);
   
-  // TODO: Query database when available:
+  // TODO(tech-debt): Query database when available:
   // const feedbacks = await prisma.feedback.findMany({ where: { scanId } });
   
   return feedbacks;
@@ -100,7 +100,7 @@ export async function updateFeedbackStatus(id, status) {
   feedback.status = status;
   feedbackStore.set(id, feedback);
   
-  // TODO: Update in database when available:
+  // TODO(tech-debt): Update in database when available:
   // await prisma.feedback.update({ where: { id }, data: { status } });
   
   return feedback;

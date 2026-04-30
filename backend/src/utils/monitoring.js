@@ -2,13 +2,20 @@
  * Model Monitoring - Tracks predictions, latency, and drift detection
  */
 
+import {
+  MAX_PREDICTIONS_HISTORY,
+  ALERT_CAP,
+  DRIFT_PSI_THRESHOLD,
+  DRIFT_CHECK_INTERVAL
+} from './constants.js';
+
 class ModelMonitor {
   constructor() {
     this.predictions = [];
     this.latencies = [];
     this.baselineDistribution = null;
     this.alerts = [];
-    this.maxHistorySize = 10000;
+    this.maxHistorySize = MAX_PREDICTIONS_HISTORY;
   }
 
   recordPrediction(confidence, isPhishing, latencyMs) {
@@ -20,8 +27,8 @@ class ModelMonitor {
       this.latencies = this.latencies.slice(-this.maxHistorySize);
     }
 
-    // Auto-check drift every 100 predictions
-    if (this.baselineDistribution && this.predictions.length % 100 === 0) {
+    // Auto-check drift every DRIFT_CHECK_INTERVAL predictions
+    if (this.baselineDistribution && this.predictions.length % DRIFT_CHECK_INTERVAL === 0) {
       this.checkDrift();
     }
   }
@@ -54,7 +61,7 @@ class ModelMonitor {
     const currentDist = this.getConfidenceDistribution();
     const psi = this.calculatePSI(this.baselineDistribution, currentDist);
 
-    if (psi > 0.2) {
+    if (psi > DRIFT_PSI_THRESHOLD) {
       return { drifted: true, psi };
     }
 
@@ -74,8 +81,8 @@ class ModelMonitor {
           message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
         });
       }
-      if (this.alerts.length >= 500) {
-        this.alerts = this.alerts.slice(-250);
+      if (this.alerts.length >= ALERT_CAP) {
+        this.alerts = this.alerts.slice(-ALERT_CAP / 2);
       }
     }
 

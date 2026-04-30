@@ -4,6 +4,10 @@
  */
 
 import { predictPhishing } from './mlInference.js';
+import {
+  URL_LENGTH_WARNING, DOMAIN_LENGTH_WARNING, PATH_LENGTH_WARNING,
+  SUBDOMAIN_WARNING, SPECIAL_CHAR_WARNING, DIGIT_WARNING, ENTROPY_WARNING
+} from './constants.js';
 
 // Suspicious TLDs often used in phishing
 const SUSPICIOUS_TLDS = new Set([
@@ -173,13 +177,13 @@ function extractFeatures(url) {
     isLegitimateTld,
     
     // Derived features
-    urlLong: url.length > 75,
-    domainLong: parsed.hostname.length > 20,
-    pathLong: parsed.pathname.length > 50,
-    manySubdomains: domainInfo.subdomainCount > 2,
-    manySpecialChars: specialCharCount > 3,
-    manyDigits: digitCount > 5,
-    highEntropy: entropy > 4.0
+    urlLong: url.length > URL_LENGTH_WARNING,
+    domainLong: parsed.hostname.length > DOMAIN_LENGTH_WARNING,
+    pathLong: parsed.pathname.length > PATH_LENGTH_WARNING,
+    manySubdomains: domainInfo.subdomainCount > SUBDOMAIN_WARNING,
+    manySpecialChars: specialCharCount > SPECIAL_CHAR_WARNING,
+    manyDigits: digitCount > DIGIT_WARNING,
+    highEntropy: entropy > ENTROPY_WARNING
   };
 }
 

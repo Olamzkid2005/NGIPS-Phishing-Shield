@@ -89,7 +89,7 @@ export async function predictPhishing(url) {
     proc.on('error', (error) => {
       if (!resolved) {
         resolved = true;
-        console.error('[ML] Prediction error:', error.message);
+        console.error(`[ML] Prediction error for URL: ${url.substring(0, 50)}... - ${error.message}`);
         resolve(null);
       }
     });
