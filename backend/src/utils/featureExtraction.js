@@ -11,7 +11,7 @@ import {
 
 // Suspicious TLDs often used in phishing
 const SUSPICIOUS_TLDS = new Set([
-  'xyz', 'top', 'gq', 'tk', 'ml', 'cf', 'ga', 'click', 'link', 
+  'xyz', 'top', 'gq', 'tk', 'ml', 'cf', 'ga', 'click', 'link',
   'work', 'date', 'download', 'stream', 'win', 'review', 'country',
   'science', 'party', 'cricket', 'racing', 'accountant', 'loan'
 ]);
@@ -26,9 +26,13 @@ const SUSPICIOUS_KEYWORDS = new Set([
 
 // Legitimate TLDs
 const LEGITIMATE_TLDS = new Set([
-  'com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'us', 'uk', 
+  'com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'us', 'uk',
   'ca', 'au', 'de', 'fr', 'jp', 'cn'
 ]);
+
+// Precompiled regex patterns for performance
+const IP_PATTERN = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+const SPECIAL_CHARS = new Set('!@#$%^&*()_+[]{}|;:\'",<>?/\\`~');
 
 /**
  * Calculate Shannon entropy of a string
@@ -54,31 +58,31 @@ function calculateEntropy(text) {
 function extractDomainInfo(url) {
   try {
     const parsed = new URL(url);
-    
+
     const host = parsed.hostname.toLowerCase();
-    
-    // Check for IP address
-    if (/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(host)) {
+
+    // Check for IP address using precompiled pattern
+    if (IP_PATTERN.test(host)) {
       return { domain: host, tld: 'ip', subdomainCount: 0, hasIp: true };
     }
-    
+
     const parts = host.split('.');
     let tld = '';
     let domain = '';
-    
+
     if (parts.length >= 2) {
       tld = parts[parts.length - 1];
       domain = parts.length >= 3 ? parts[parts.length - 2] : parts[0];
     } else {
       domain = host;
     }
-    
+
     const subdomainCount = Math.max(0, parts.length - 2);
-    
-    return { 
-      domain: host, 
-      tld, 
-      subdomainCount, 
+
+    return {
+      domain: host,
+      tld,
+      subdomainCount,
       hasIp: false,
       mainDomain: domain
     };
@@ -88,66 +92,95 @@ function extractDomainInfo(url) {
 }
 
 /**
- * Extract all features from a URL
+ * Count character types in a URL
  */
-function extractFeatures(url) {
-  if (!url) return null;
-  
-  url = url.trim();
-  const normalizedUrl = (url.startsWith('http://') || url.startsWith('https://')) ? url : 'http://' + url;
-  
-  let parsed;
-  try {
-    parsed = new URL(normalizedUrl);
-  } catch {
-    return null;
-  }
-  
-  const domainInfo = extractDomainInfo(normalizedUrl);
-  
-  // Count characters
+function countCharacters(url) {
   let specialCharCount = 0;
   let digitCount = 0;
   let letterCount = 0;
   let uppercaseCount = 0;
-  const specialChars = new Set('!@#$%^&*()_+[]{}|;:\'",<>?/\\`~');
-  
+
   for (const char of url) {
-    if (specialChars.has(char)) specialCharCount++;
+    if (SPECIAL_CHARS.has(char)) specialCharCount++;
     if (/\d/.test(char)) digitCount++;
     if (/[a-z]/.test(char)) letterCount++;
     if (/[A-Z]/.test(char)) uppercaseCount++;
   }
-  
-  // Count various patterns
-  const slashCount = (url.match(/\//g) || []).length;
-  const hyphenCount = (url.match(/-/g) || []).length;
-  const underlineCount = (url.match(/_/g) || []).length;
-  const questionMarkCount = (url.match(/\?/g) || []).length;
-  const atSymbol = !!parsed.username;
-  const doubleSlash = parsed.pathname.includes('//');
-  const encodedChars = (url.match(/%/g) || []).length;
-  
+
+  return { specialCharCount, digitCount, letterCount, uppercaseCount };
+}
+
+/**
+ * Count URL patterns (slashes, hyphens, etc.)
+ */
+function countPatterns(url) {
+  return {
+    slashCount: (url.match(/\//g) || []).length,
+    hyphenCount: (url.match(/-/g) || []).length,
+    underlineCount: (url.match(/_/g) || []).length,
+    questionMarkCount: (url.match(/\?/g) || []).length,
+    encodedChars: (url.match(/%/g) || []).length
+  };
+}
+
+/**
+ * Detect suspicious keywords in URL
+ */
+function detectSuspiciousKeywords(url) {
+  const found = [];
+  const urlLower = url.toLowerCase();
+  for (const kw of SUSPICIOUS_KEYWORDS) {
+    if (urlLower.includes(kw)) found.push(kw);
+  }
+  return found;
+}
+
+/**
+ * Extract all features from a URL
+ */
+function extractFeatures(url) {
+  if (!url) return null;
+
+  url = url.trim();
+
+  // Try https first (more common for legitimate sites), fallback to http
+  let normalizedUrl = url.startsWith('https://') || url.startsWith('http://')
+    ? url
+    : 'https://' + url;
+
+  let parsed;
+  try {
+    parsed = new URL(normalizedUrl);
+  } catch {
+    // Fallback to http if https fails
+    normalizedUrl = url.startsWith('http://') ? url : 'http://' + url;
+    try {
+      parsed = new URL(normalizedUrl);
+    } catch {
+      return null;
+    }
+  }
+
+  const domainInfo = extractDomainInfo(normalizedUrl);
+  const charCounts = countCharacters(url);
+  const patterns = countPatterns(url);
+
   // Check for port
   const hasPort = /:\d+/.test(parsed.host);
-  
+
   // Detect suspicious keywords
-  const urlLower = url.toLowerCase();
-  const foundKeywords = [];
-  for (const kw of SUSPICIOUS_KEYWORDS) {
-    if (urlLower.includes(kw)) foundKeywords.push(kw);
-  }
-  
+  const foundKeywords = detectSuspiciousKeywords(url);
+
   // Calculate entropy
   const entropy = calculateEntropy(parsed.hostname);
-  
+
   // Path depth
   const pathDepth = parsed.pathname.split('/').filter(p => p).length;
-  
+
   // Suspicious TLD
   const isSuspiciousTld = SUSPICIOUS_TLDS.has(domainInfo.tld);
   const isLegitimateTld = LEGITIMATE_TLDS.has(domainInfo.tld);
-  
+
   return {
     url,
     urlLength: url.length,
@@ -155,27 +188,20 @@ function extractFeatures(url) {
     pathLength: parsed.pathname.length,
     queryLength: parsed.search.length,
     subdomainCount: domainInfo.subdomainCount,
-    specialCharCount,
-    digitCount,
-    letterCount,
-    uppercaseCount,
+    ...charCounts,
     hasHttps: parsed.protocol === 'https:',
     tld: domainInfo.tld,
     hasIp: domainInfo.hasIp,
     hasPort,
     pathDepth,
-    slashCount,
-    hyphenCount,
-    underlineCount,
-    questionMarkCount,
-    atSymbol,
-    doubleSlash,
-    encodedChars,
+    ...patterns,
+    atSymbol: !!parsed.username,
+    doubleSlash: parsed.pathname.includes('//'),
     suspiciousKeywords: foundKeywords,
     entropy,
     isSuspiciousTld,
     isLegitimateTld,
-    
+
     // Derived features
     urlLong: url.length > URL_LENGTH_WARNING,
     domainLong: parsed.hostname.length > DOMAIN_LENGTH_WARNING,
@@ -382,34 +408,37 @@ async function analyzeUrlEnsemble(url) {
   let modelScores = null;
   let mlAvailable = false;
 
-  if (mlResult) {
+  if (mlResult && mlResult.success && mlResult.data) {
     mlAvailable = true;
-    mlConfidence = mlResult.ml_confidence;
-    modelScores = mlResult.model_scores;
+    mlConfidence = mlResult.data.ml_confidence;
+    modelScores = mlResult.data.model_scores;
 
     // Ensemble: 30% heuristic + 70% ML
-    finalConfidence = (heuristicResult.confidence * 0.3) + (mlResult.confidence * 0.7);
+    finalConfidence = (heuristicResult.confidence * 0.3) + (mlResult.data.confidence * 0.7);
 
     // Combine reasons from both systems
     finalReasons = [...heuristicResult.reasons];
 
     // Add ML-specific reasons
-    if (mlResult.is_phishing) {
-      const confidencePct = Math.round(mlResult.confidence * 100);
+    if (mlResult.data.is_phishing) {
+      const confidencePct = Math.round(mlResult.data.confidence * 100);
       finalReasons.push(`ML model high confidence (${confidencePct}%)`);
     } else {
-      const confidencePct = Math.round(mlResult.confidence * 100);
+      const confidencePct = Math.round(mlResult.data.confidence * 100);
       finalReasons.push(`ML model indicates low risk (${confidencePct}%)`);
     }
 
     // Add individual model scores if divergent
-    const lrScore = mlResult.model_scores?.logistic_regression ?? 0;
-    const mnbScore = mlResult.model_scores?.multinomial_nb ?? 0;
+    const lrScore = mlResult.data.model_scores?.logistic_regression ?? 0;
+    const mnbScore = mlResult.data.model_scores?.multinomial_nb ?? 0;
     if (Math.abs(lrScore - mnbScore) > 0.3) {
       finalReasons.push(`Model divergence: LR=${(lrScore * 100).toFixed(1)}% vs MNB=${(mnbScore * 100).toFixed(1)}%`);
     }
   } else {
-    // No ML available, use 100% heuristic
+    // ML unavailable or failed, use 100% heuristic
+    if (mlResult && !mlResult.success) {
+      console.warn(`[ML] Prediction failed: ${mlResult.error}`);
+    }
     finalConfidence = heuristicResult.confidence;
     finalReasons = [...heuristicResult.reasons];
   }

@@ -12,15 +12,28 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ML_SERVICE_DIR = path.join(__dirname, '../../../ml-service');
 const PREDICT_SCRIPT = path.join(ML_SERVICE_DIR, 'predict.py');
 
+// Compiled regex patterns for performance
+const URL_SAFE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9:.\/\-_]+$/;
+const DANGEROUS_CHARS_PATTERN = /[;&|`$<>]/;
+const IP_ADDRESS_PATTERN = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+
+/**
+ * Validate URL for shell execution (security check)
+ * Uses URL constructor for primary validation, regex as fallback
+ */
 function isValidUrlForShell(url) {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9:.\/\-\_]+$/.test(url)) {
-    return false;
+  // First try URL constructor for robust validation
+  try {
+    new URL(url);
+    // If valid URL, check for dangerous characters
+    if (DANGEROUS_CHARS_PATTERN.test(url)) {
+      return false;
+    }
+    return true;
+  } catch {
+    // Fallback to regex for non-URL strings that might be paths
+    return URL_SAFE_PATTERN.test(url);
   }
-  const dangerous = /[;&|`$<>]/;
-  if (dangerous.test(url)) {
-    return false;
-  }
-  return true;
 }
 
 let modelLoadError = null;
@@ -74,16 +87,16 @@ export async function loadModels() {
 /**
  * Run phishing prediction using Python subprocess
  * @param {string} url - URL to classify
- * @returns {object|null} - Prediction result or null if unavailable
+ * @returns {Promise<{success: boolean, data?: object, error?: string}>} - Structured result
  */
 export async function predictPhishing(url) {
   if (!modelsAvailable) {
-    return null;
+    return { success: false, error: 'ML models not available' };
   }
 
   if (!isValidUrlForShell(url)) {
     console.error('[ML] Invalid URL for processing:', url.substring(0, 50));
-    return null;
+    return { success: false, error: 'Invalid URL format' };
   }
 
   return new Promise((resolve) => {
@@ -106,16 +119,17 @@ export async function predictPhishing(url) {
       if (!resolved) {
         resolved = true;
         console.error(`[ML] Prediction error for URL: ${url.substring(0, 50)}... - ${error.message}`);
-        resolve(null);
+        resolve({ success: false, error: `Process error: ${error.message}` });
       }
     });
 
     const timeout = setTimeout(() => {
-      proc.kill('SIGTERM');
+      // Force kill on both Windows and Unix - SIGKILL cannot be caught
+      proc.kill('SIGKILL');
       if (!resolved) {
         resolved = true;
         console.error('[ML] Prediction timed out for URL:', url);
-        resolve(null);
+        resolve({ success: false, error: 'Prediction timeout (30s)' });
       }
     }, 30000);
 
@@ -131,21 +145,25 @@ export async function predictPhishing(url) {
           if (result.success) {
             console.log(`[ML] Inference ${result.latency_ms}ms | LR=${result.model_scores.logistic_regression} MNB=${result.model_scores.multinomial_nb} → ${result.confidence}`);
             resolve({
-              is_phishing: result.is_phishing,
-              confidence: result.confidence,
-              ml_confidence: result.ml_confidence,
-              model_scores: result.model_scores,
-              latency_ms: result.latency_ms,
-              model_version: result.model_version
+              success: true,
+              data: {
+                is_phishing: result.is_phishing,
+                confidence: result.confidence,
+                ml_confidence: result.ml_confidence,
+                model_scores: result.model_scores,
+                latency_ms: result.latency_ms,
+                model_version: result.model_version
+              }
             });
             return;
           } else {
             console.error('[ML] Prediction failed:', result.error);
-            resolve(null);
+            resolve({ success: false, error: result.error });
             return;
           }
         } catch (parseError) {
           console.error('[ML] Failed to parse Python output:', stdout.substring(0, 200));
+          resolve({ success: false, error: 'Failed to parse ML response' });
         }
       }
 
@@ -156,7 +174,7 @@ export async function predictPhishing(url) {
         }
       }
 
-      resolve(null);
+      resolve({ success: false, error: `Process exited with code ${code}` });
     });
   });
 }

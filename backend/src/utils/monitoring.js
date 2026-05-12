@@ -18,6 +18,15 @@ class ModelMonitor {
     this.maxHistorySize = MAX_PREDICTIONS_HISTORY;
   }
 
+  /**
+   * Ensure alerts do not exceed cap - call after any alert addition
+   */
+  #capAlerts() {
+    if (this.alerts.length >= ALERT_CAP) {
+      this.alerts = this.alerts.slice(-Math.floor(ALERT_CAP / 2));
+    }
+  }
+
   recordPrediction(confidence, isPhishing, latencyMs) {
     this.predictions.push({ confidence, isPhishing, latencyMs, timestamp: Date.now() });
     this.latencies.push(latencyMs);
@@ -31,6 +40,14 @@ class ModelMonitor {
     if (this.baselineDistribution && this.predictions.length % DRIFT_CHECK_INTERVAL === 0) {
       this.checkDrift();
     }
+  }
+
+  /**
+   * Add an alert with automatic capping to prevent memory leaks
+   */
+  addAlert(alert) {
+    this.alerts.push({ ...alert, timestamp: alert.timestamp || Date.now() });
+    this.#capAlerts();
   }
 
   calculatePSI(expected, actual) {
@@ -74,15 +91,11 @@ class ModelMonitor {
     if (result.drifted) {
       const lastAlert = this.alerts[this.alerts.length - 1];
       if (!lastAlert || lastAlert.type !== 'DRIFT_DETECTED' || Date.now() - lastAlert.timestamp > 300000) {
-        this.alerts.push({
+        this.addAlert({
           type: 'DRIFT_DETECTED',
           psi: result.psi,
-          timestamp: Date.now(),
           message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
         });
-      }
-      if (this.alerts.length >= ALERT_CAP) {
-        this.alerts = this.alerts.slice(-ALERT_CAP / 2);
       }
     }
 

@@ -7,48 +7,55 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { createRequire } from 'module';
+import crypto from 'crypto';
 import { timingSafeEqual } from 'crypto';
 import { errorHandler } from './utils/errors.js';
-
-// Import routes
+import { authMiddleware } from './utils/auth.js';
+import { logger } from './utils/logger.js';
+import { loadModels, getMLStatus } from './utils/mlInference.js';
 import { analyzeUrlHandler, getScansHandler, getScanByIdHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
 import { getStatsHandler } from './routes/stats.js';
 import { getTrendsHandler, getTopDomainsHandler, getThreatClassificationHandler } from './routes/analytics.js';
 import { getAllFeedbackHandler, updateFeedbackHandler } from './routes/feedback.js';
 import { getSettingsHandler, updateSettingsHandler } from './routes/settings.js';
 import { loginHandler, refreshHandler, logoutHandler, meHandler } from './routes/auth.js';
-
-// Import auth middleware
-import { authMiddleware } from './utils/auth.js';
-
-// Import ML inference
-import { loadModels, getMLStatus } from './utils/mlInference.js';
-
-// Import monitoring and retraining
-import { monitor } from './utils/monitoring.js';
 import { triggerRetrain, evaluateModel } from './utils/retrain.js';
+import { monitor } from './utils/monitoring.js';
+import {
+  ALLOWED_ORIGINS,
+  RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX_REQUESTS,
+  LOGIN_RATE_LIMIT_WINDOW_MS,
+  LOGIN_RATE_LIMIT_MAX,
+  REFRESH_RATE_LIMIT_WINDOW_MS,
+  REFRESH_RATE_LIMIT_MAX,
+  MODEL_VERSION,
+  ML_METHOD_PYTHON
+} from './utils/constants.js';
 
-// Import logger
-import logger from './utils/logger.js';
+// Package info - using direct import
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-const require = createRequire(import.meta.url);
-const { version } = require('../package.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Read version from package.json safely - use fallback for version
+let VERSION = '1.0.0';
+try {
+  const packageJsonPath = join(__dirname, '..', 'package.json');
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+  VERSION = packageJson.version || '1.0.0';
+} catch (e) {
+  console.warn('[SERVER] Could not read package.json version:', e.message);
+}
 
 // Create Express app
 const app = express();
 const PORT = process.env.PORT || 8000;
 
 // Middleware
-const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:8000',
-  'https://localhost:3000',
-  'https://localhost:5173',
-  'https://localhost:8000'
-];
-
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
@@ -74,27 +81,20 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(cors({
-  origin: function(origin, callback) {
-    if (process.env.NODE_ENV === 'production' && !origin) {
-      return callback(new Error('CORS: Origin required'), false);
-    }
-
-    if (!origin) return callback(null, true);
-    if (origin.startsWith('chrome-extension://')) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: process.env.NODE_ENV === 'production'
+    ? ALLOWED_ORIGINS
+    : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true }))
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: process.env.NODE_ENV === 'test' ? 10000 : 100, // 100 requests per minute
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: process.env.NODE_ENV === 'test' ? 10000 : RATE_LIMIT_MAX_REQUESTS,
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',
@@ -106,8 +106,8 @@ app.use('/v1/', limiter);
 
 // Login-specific rate limiter
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
+  windowMs: LOGIN_RATE_LIMIT_WINDOW_MS,
+  max: LOGIN_RATE_LIMIT_MAX,
   message: {
     error: {
       code: 'LOGIN_LIMIT_EXCEEDED',
@@ -119,19 +119,51 @@ const loginLimiter = rateLimit({
   keyGenerator: (req) => req.body?.email || req.ip
 });
 
-// Request logging
+// Token refresh rate limiter (stricter to prevent token reuse attacks)
+const refreshLimiter = rateLimit({
+  windowMs: REFRESH_RATE_LIMIT_WINDOW_MS,
+  max: REFRESH_RATE_LIMIT_MAX,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many token refresh attempts. Please try again later.'
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Request ID middleware for distributed tracing
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, { method: req.method, path: req.path });
+  req.id = req.headers['x-request-id'] || crypto.randomUUID();
+  res.setHeader('x-request-id', req.id);
+  logger.info(`${req.method} ${req.path}`, { method: req.method, path: req.path, requestId: req.id });
   next();
 });
 
-// Extension API key validation (additional security layer)
+// Extension API key validation (additional security layer) - timing-safe comparison
 function validateExtensionKey(req, res, next) {
   const extensionKey = req.headers['x-extension-key'];
   const validKey = process.env.EXTENSION_API_KEY;
 
   if (validKey) {
-    if (!extensionKey || extensionKey !== validKey) {
+    if (!extensionKey) {
+      return res.status(401).json({
+        error: { code: 'INVALID_EXTENSION_KEY', message: 'Invalid or missing extension API key' }
+      });
+    }
+
+    try {
+      const keyBuf = Buffer.from(extensionKey, 'utf-8');
+      const validBuf = Buffer.from(validKey, 'utf-8');
+
+      // Constant-time comparison to prevent timing attacks
+      if (keyBuf.length !== validBuf.length || !timingSafeEqual(keyBuf, validBuf)) {
+        return res.status(401).json({
+          error: { code: 'INVALID_EXTENSION_KEY', message: 'Invalid or missing extension API key' }
+        });
+      }
+    } catch {
       return res.status(401).json({
         error: { code: 'INVALID_EXTENSION_KEY', message: 'Invalid or missing extension API key' }
       });
@@ -174,8 +206,8 @@ app.get('/health', (req, res) => {
     models: {
       status: mlStatus.loaded ? 'loaded' : 'unavailable',
       method: mlStatus.method,
-      version,
-      available: mlStatus.loaded ? ['Python Subprocess (Ensemble)', 'Heuristic'] : ['Heuristic'],
+      version: MODEL_VERSION,
+      available: mlStatus.loaded ? [ML_METHOD_PYTHON, 'Heuristic'] : ['Heuristic'],
       error: mlStatus.error
     }
   });
@@ -242,7 +274,7 @@ app.patch('/v1/settings', (req, res, next) => updateSettingsHandler(req, res).ca
 
 // Auth routes
 app.post('/v1/auth/login', loginLimiter, (req, res, next) => loginHandler(req, res).catch(next));
-app.post('/v1/auth/refresh', (req, res, next) => refreshHandler(req, res).catch(next));
+app.post('/v1/auth/refresh', refreshLimiter, (req, res, next) => refreshHandler(req, res).catch(next));
 app.post('/v1/auth/logout', (req, res, next) => logoutHandler(req, res).catch(next));
 app.get('/v1/auth/me', (req, res, next) => meHandler(req, res).catch(next));
 
@@ -320,19 +352,79 @@ app.use((req, res) => {
   });
 });
 
+// Required environment variables for production
+const REQUIRED_ENV_VARS = ['JWT_SECRET'];
+const OPTIONAL_ENV_VARS = ['ADMIN_API_KEY', 'EXTENSION_API_KEY', 'DATABASE_URL'];
+
+/**
+ * Validate required environment variables at startup
+ */
+function validateEnvironment() {
+  const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+
+  if (missing.length > 0 && process.env.NODE_ENV === 'production') {
+    throw new Error(`FATAL: Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  if (missing.length > 0) {
+    logger.warn(`[ENV] Missing environment variables: ${missing.join(', ')}`);
+  }
+
+  logger.info(`[ENV] Environment: ${process.env.NODE_ENV || 'development'}`);
+}
+
 // Start server and load models
 async function startServer() {
+  // Validate environment first
+  validateEnvironment();
+
   // Load ML models (non-blocking, system works without them)
   await loadModels();
 
   if (!process.env.ADMIN_API_KEY) {
-    logger.warn('ADMIN_API_KEY not set. Admin endpoints will be inaccessible.');
+    logger.warn('[AUTH] ADMIN_API_KEY not set. Admin endpoints will be inaccessible.');
   }
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     const mlStatus = getMLStatus();
     logger.info('NGIPS Phishing Shield API started', { port: PORT, mlStatus: mlStatus.loaded ? mlStatus.method : 'unavailable' });
   });
+
+  // Graceful shutdown handlers
+  const gracefulShutdown = async (signal) => {
+    logger.info(`[SHUTDOWN] Received ${signal}, starting graceful shutdown...`);
+
+    // Stop accepting new connections
+    server.close(async (err) => {
+      if (err) {
+        logger.error('[SHUTDOWN] Error closing server:', err.message);
+        process.exit(1);
+      }
+
+      logger.info('[SHUTDOWN] No more incoming connections');
+
+      try {
+        // Disconnect database
+        const { prisma } = await import('./utils/database.js');
+        await prisma.$disconnect();
+        logger.info('[SHUTDOWN] Database disconnected');
+      } catch (dbError) {
+        logger.warn('[SHUTDOWN] Database disconnect error:', dbError.message);
+      }
+
+      logger.info('[SHUTDOWN] Graceful shutdown complete');
+      process.exit(0);
+    });
+
+    // Force exit after 10 seconds if graceful shutdown fails
+    setTimeout(() => {
+      logger.error('[SHUTDOWN] Forcing exit after timeout');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 if (process.env.NODE_ENV !== 'test') {

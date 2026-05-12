@@ -4,9 +4,9 @@
  */
 
 import {
-  hashPassword, 
-  comparePassword, 
-  generateAccessToken, 
+  hashPassword,
+  comparePassword,
+  generateAccessToken,
   verifyAccessToken,
   generateRefreshToken,
   getRefreshToken,
@@ -14,8 +14,28 @@ import {
   revokeRefreshToken,
   findUserByEmail,
   findUserById,
-  createUser
+  createUser,
+  isValidEmail
 } from '../utils/auth.js';
+
+/**
+ * Validate login input
+ */
+function validateLoginInput(email, password) {
+  if (!email || !password) {
+    return { valid: false, error: 'Email and password are required' };
+  }
+
+  if (!isValidEmail(email)) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+
+  if (typeof password !== 'string' || password.length < 1) {
+    return { valid: false, error: 'Password is required' };
+  }
+
+  return { valid: true };
+}
 
 /**
  * Initialize demo user if not exists (dev only)
@@ -35,16 +55,17 @@ if (process.env.NODE_ENV !== 'production') {
  */
 export async function loginHandler(req, res) {
   const { email, password } = req.body;
-  
-  if (!email || !password) {
+
+  const validation = validateLoginInput(email, password);
+  if (!validation.valid) {
     return res.status(400).json({
       error: {
         code: 'MISSING_CREDENTIALS',
-        message: 'Email and password are required'
+        message: validation.error
       }
     });
   }
-  
+
   const user = findUserByEmail(email);
   if (!user) {
     return res.status(401).json({
@@ -90,26 +111,35 @@ export async function loginHandler(req, res) {
  */
 export async function refreshHandler(req, res) {
   const { refreshToken } = req.body;
-  
+
   if (!refreshToken) {
     return res.status(400).json({ error: { code: 'MISSING_TOKEN', message: 'Refresh token required' } });
   }
-  
+
   const stored = getRefreshToken(refreshToken);
   if (!stored) {
     return res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid or expired refresh token' } });
   }
-  
-  // Delete used token (rotation)
-  deleteRefreshToken(refreshToken);
-  
-  const userId = stored?.userId;
+
+  const userId = stored.userId;
   const user = findUserById(userId);
   const role = user?.role || 'user';
-  
-  const newAccessToken = generateAccessToken({ sub: userId, role });
-  const newRefreshToken = generateRefreshToken(userId);
-  
+
+  // Generate new tokens BEFORE invalidating old one
+  // This ensures user doesn't lose access if generation fails
+  let newAccessToken;
+  let newRefreshToken;
+  try {
+    newAccessToken = generateAccessToken({ sub: userId, role });
+    newRefreshToken = generateRefreshToken(userId);
+  } catch (error) {
+    console.error('[AUTH] Token generation failed:', error.message);
+    return res.status(500).json({ error: { code: 'TOKEN_GENERATION_FAILED', message: 'Failed to generate tokens' } });
+  }
+
+  // Only delete old token after new tokens are successfully generated
+  deleteRefreshToken(refreshToken);
+
   return res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
 }
 

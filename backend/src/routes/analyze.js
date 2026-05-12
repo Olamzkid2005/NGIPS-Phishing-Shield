@@ -1,15 +1,55 @@
 /**
  * Analysis Route - URL phishing detection endpoint
  * POST /v1/analyze
+ *
+ * @module routes/analyze
+ * @requires ../utils/featureExtraction
+ * @requires ../utils/monitoring
+ * @requires ../utils/feedbackRepository
  */
 
 import crypto from 'crypto';
 import { analyzeUrlEnsemble } from '../utils/featureExtraction.js';
 import { monitor } from '../utils/monitoring.js';
 import { createFeedback } from '../utils/feedbackRepository.js';
+import { SCAN_HISTORY_LIMIT, MODEL_VERSION } from '../utils/constants.js';
 
 // In-memory scan history (replace with database in production)
 export const scanHistory = new Map();
+
+// Periodic cleanup interval (every 5 minutes)
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * Cleanup old scans to prevent unbounded memory growth
+ */
+function cleanupOldScans() {
+  if (scanHistory.size <= SCAN_HISTORY_LIMIT) return;
+
+  const sorted = [...scanHistory.entries()].sort((a, b) =>
+    new Date(a[1].timestamp) - new Date(b[1].timestamp)
+  );
+
+  // Remove oldest 20% when limit exceeded
+  const removeCount = Math.floor(SCAN_HISTORY_LIMIT * 0.2);
+  scanHistory.clear();
+  sorted.slice(removeCount).forEach(([k, v]) => scanHistory.set(k, v));
+
+  console.log(`[CLEANUP] Removed ${removeCount} old scans, ${scanHistory.size} remaining`);
+}
+
+// Start periodic cleanup - using atomic operation to prevent race condition
+let cleanupTimer = null;
+function startPeriodicCleanup() {
+  // Use compare-and-swap pattern to prevent race condition
+  if (cleanupTimer !== null || process.env.NODE_ENV === 'test') return;
+
+  cleanupTimer = setInterval(() => {
+    cleanupOldScans();
+  }, CLEANUP_INTERVAL_MS);
+
+  console.log(`[CLEANUP] Periodic cleanup scheduled every ${CLEANUP_INTERVAL_MS / 60000} minutes`);
+}
 
 /**
  * Store scan result
@@ -22,22 +62,21 @@ function storeScan(result) {
     confidence: result.confidence,
     threatLevel: result.threatLevel,
     reasons: result.reasons,
-    modelVersion: '1.0.0',
+    modelVersion: MODEL_VERSION,
     processingTime: result.processingTime,
     timestamp: new Date().toISOString()
   };
-  
+
   scanHistory.set(scan.id, scan);
-  
-  // Keep only last 1000 scans in memory
-  if (scanHistory.size > 1000) {
-    const sorted = [...scanHistory.entries()].sort((a, b) => 
-      new Date(a[1].timestamp) - new Date(b[1].timestamp)
-    );
-    scanHistory.clear();
-    sorted.slice(-1000).forEach(([k, v]) => scanHistory.set(k, v));
+
+  // Trigger cleanup when limit reached (also handled by periodic cleanup)
+  if (scanHistory.size > SCAN_HISTORY_LIMIT) {
+    cleanupOldScans();
   }
-  
+
+  // Start periodic cleanup on first scan
+  startPeriodicCleanup();
+
   return scan;
 }
 
