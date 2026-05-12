@@ -248,11 +248,10 @@ export async function submitFeedbackHandler(req, res) {
   scan.feedback = feedback;
 
   scan.feedbackCorrect = isFalsePositive ? 0 : 1;
-  monitor.alerts.push({
+  monitor.addAlert({
     type: 'FEEDBACK_RECEIVED',
     scanId,
     isFalsePositive,
-    timestamp: Date.now(),
     message: isFalsePositive ? `False positive reported for ${scan.url}` : `Positive feedback for ${scan.url}`
   });
 

@@ -8,6 +8,7 @@ import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { monitor } from './monitoring.js';
+import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,9 +70,8 @@ export async function triggerRetrain(scanHistory) {
           return;
         }
 
-        monitor.alerts.push({
+        monitor.addAlert({
           type: 'RETRAIN_COMPLETED',
-          timestamp: Date.now(),
           message: 'Model retraining completed successfully.'
         });
 
