@@ -11,6 +11,25 @@ backend/models/random_forest_20260416_170709.pkl
 # Dashboard
 dashboard/
 
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-journal
+prisma/*.db
+prisma/migrations/
+
+# Node
+node_modules/
+coverage/
+
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/

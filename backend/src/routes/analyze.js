@@ -14,49 +14,83 @@ import { monitor } from '../utils/monitoring.js';
 import { createFeedback } from '../utils/feedbackRepository.js';
 import { SCAN_HISTORY_LIMIT, MODEL_VERSION } from '../utils/constants.js';
 import { logger } from '../utils/logger.js';
+import { prisma } from '../utils/database.js';
 
-// In-memory scan history (replace with database in production)
-export const scanHistory = new Map();
+// Database-backed scan history
+export const scanHistory = {
+  async getAll() {
+    return prisma.scan.findMany({ orderBy: { createdAt: 'desc' } });
+  },
+  async getById(id) {
+    return prisma.scan.findUnique({ where: { id } });
+  },
+  async create(data) {
+    return prisma.scan.create({
+      data: {
+        id: data.id,
+        url: data.url,
+        action: data.action,
+        confidence: data.confidence,
+        threatLevel: data.threatLevel,
+        reasons: JSON.stringify(data.reasons),
+        modelVersion: data.modelVersion || MODEL_VERSION,
+        processingTime: data.processingTime
+      }
+    });
+  },
+  async getCount() {
+    return prisma.scan.count();
+  },
+  async getRecent(limit) {
+    return prisma.scan.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+};
 
 // Periodic cleanup interval (every 5 minutes)
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
- * Cleanup old scans to prevent unbounded memory growth
+ * Cleanup old scans to prevent unbounded database growth
  */
-function cleanupOldScans() {
-  if (scanHistory.size <= SCAN_HISTORY_LIMIT) return;
+async function cleanupOldScans() {
+  const count = await prisma.scan.count();
+  if (count <= SCAN_HISTORY_LIMIT) return;
 
-  const sorted = [...scanHistory.entries()].sort((a, b) =>
-    new Date(a[1].timestamp) - new Date(b[1].timestamp)
-  );
+  // Get IDs of oldest 20% of records to delete
+  const toDelete = await prisma.scan.findMany({
+    take: Math.floor(SCAN_HISTORY_LIMIT * 0.2),
+    orderBy: { createdAt: 'asc' },
+    select: { id: true }
+  });
 
-  // Remove oldest 20% when limit exceeded
-  const removeCount = Math.floor(SCAN_HISTORY_LIMIT * 0.2);
-  scanHistory.clear();
-  sorted.slice(removeCount).forEach(([k, v]) => scanHistory.set(k, v));
-
-  logger.info(`Removed ${removeCount} old scans, ${scanHistory.size} remaining`, { component: 'cleanup' });
+  if (toDelete.length > 0) {
+    await prisma.scan.deleteMany({
+      where: { id: { in: toDelete.map(r => r.id) } }
+    });
+    logger.info(`Removed ${toDelete.length} old scans from database`, { component: 'cleanup' });
+  }
 }
 
 // Start periodic cleanup - using atomic operation to prevent race condition
 let cleanupTimer = null;
 function startPeriodicCleanup() {
-  // Use compare-and-swap pattern to prevent race condition
   if (cleanupTimer !== null || process.env.NODE_ENV === 'test') return;
 
   cleanupTimer = setInterval(() => {
-    cleanupOldScans();
+    cleanupOldScans().catch(err => logger.error('Cleanup error:', { error: err.message }));
   }, CLEANUP_INTERVAL_MS);
 
   logger.info(`Periodic cleanup scheduled every ${CLEANUP_INTERVAL_MS / 60000} minutes`, { component: 'cleanup' });
 }
 
 /**
- * Store scan result
+ * Store scan result in database
  */
-function storeScan(result) {
-  const scan = {
+async function storeScan(result) {
+  const scan = await scanHistory.create({
     id: result.id || `scan_${crypto.randomUUID().slice(0, 8)}`,
     url: result.url,
     action: result.action,
@@ -64,15 +98,13 @@ function storeScan(result) {
     threatLevel: result.threatLevel,
     reasons: result.reasons,
     modelVersion: MODEL_VERSION,
-    processingTime: result.processingTime,
-    timestamp: new Date().toISOString()
-  };
+    processingTime: result.processingTime
+  });
 
-  scanHistory.set(scan.id, scan);
-
-  // Trigger cleanup when limit reached (also handled by periodic cleanup)
-  if (scanHistory.size > SCAN_HISTORY_LIMIT) {
-    cleanupOldScans();
+  // Trigger cleanup when limit reached
+  const count = await prisma.scan.count();
+  if (count > SCAN_HISTORY_LIMIT) {
+    cleanupOldScans().catch(err => logger.error('Cleanup error:', { error: err.message }));
   }
 
   // Start periodic cleanup on first scan
@@ -118,8 +150,8 @@ export async function analyzeUrlHandler(req, res) {
       });
     }
     
-    // Store scan
-    const scan = storeScan({
+    // Store scan in database
+    const scan = await storeScan({
       id: `scan_${crypto.randomUUID().slice(0, 8)}`,
       ...result
     });
@@ -134,10 +166,10 @@ export async function analyzeUrlHandler(req, res) {
       action: scan.action,
       confidence: scan.confidence,
       threatLevel: scan.threatLevel,
-      reasons: scan.reasons,
+      reasons: typeof scan.reasons === 'string' ? JSON.parse(scan.reasons) : scan.reasons,
       modelVersion: scan.modelVersion,
       processingTime: scan.processingTime,
-      timestamp: scan.timestamp,
+      timestamp: scan.createdAt.toISOString(),
       mlConfidence: result.mlConfidence,
       heuristicConfidence: result.heuristicConfidence,
       modelScores: result.modelScores,
@@ -156,34 +188,43 @@ export async function analyzeUrlHandler(req, res) {
 }
 
 /**
- * GET /v1/scans - Get scan history
+ * GET /v1/scans - Get scan history from database
  */
 export async function getScansHandler(req, res) {
   const { page = 1, limit = 50, action, url_contains } = req.query;
-  
+
   const pageNum = parseInt(page) || 1;
   const limitNum = Math.min(parseInt(limit) || 50, 100);
   const offset = (pageNum - 1) * limitNum;
-  
-  let scans = Array.from(scanHistory.values())
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  
-  // Filter by action
+
+  // Build where clause
+  const where = {};
   if (action) {
-    scans = scans.filter(s => s.action === action);
+    where.action = action;
   }
-  
-  // Filter by URL contains (sanitized)
   if (url_contains) {
     const sanitized = url_contains.replace(/[<>"'`]/g, '');
-    scans = scans.filter(s => s.url.toLowerCase().includes(sanitized.toLowerCase()));
+    where.url = { contains: sanitized };
   }
-  
-  const total = scans.length;
-  const paginatedScans = scans.slice(offset, offset + limitNum);
-  
+
+  const [scans, total] = await Promise.all([
+    prisma.scan.findMany({
+      where,
+      skip: offset,
+      take: limitNum,
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.scan.count({ where })
+  ]);
+
+  const data = scans.map(scan => ({
+    ...scan,
+    reasons: typeof scan.reasons === 'string' ? JSON.parse(scan.reasons) : scan.reasons,
+    timestamp: scan.createdAt.toISOString()
+  }));
+
   return res.json({
-    data: paginatedScans,
+    data,
     pagination: {
       page: pageNum,
       limit: limitNum,
@@ -198,7 +239,7 @@ export async function getScansHandler(req, res) {
  */
 export async function getScanByIdHandler(req, res) {
   const { id } = req.params;
-  const scan = scanHistory.get(id);
+  const scan = await prisma.scan.findUnique({ where: { id } });
 
   if (!scan) {
     return res.status(404).json({
@@ -209,7 +250,11 @@ export async function getScanByIdHandler(req, res) {
     });
   }
 
-  return res.json(scan);
+  return res.json({
+    ...scan,
+    reasons: typeof scan.reasons === 'string' ? JSON.parse(scan.reasons) : scan.reasons,
+    timestamp: scan.createdAt.toISOString()
+  });
 }
 
 /**

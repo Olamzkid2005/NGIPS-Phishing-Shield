@@ -1,29 +1,51 @@
 /**
  * Statistics Route - GET /v1/stats
  * Returns real-time model monitoring statistics
+ *
+ * @module routes/stats
+ * @requires ../utils/monitoring
+ * @requires ../utils/mlInference
+ * @requires ./analyze
+ * @requires ../utils/feedbackRepository
  */
 
 import { monitor } from '../utils/monitoring.js';
 import { getMLStatus } from '../utils/mlInference.js';
 import { scanHistory } from './analyze.js';
 import { getFeedbackStats } from '../utils/feedbackRepository.js';
+import { prisma } from '../utils/database.js';
 
 /**
- * GET /v1/stats - Get aggregate statistics
+ * GET /v1/stats - Get aggregate statistics from database
  */
 export async function getStatsHandler(req, res) {
   const monitorStats = monitor.getStats();
   const mlStatus = getMLStatus();
 
-  const scans = Array.from(scanHistory.values());
-  // Uses real feedback stats from feedbackRepository
-  const feedbackStats = await getFeedbackStats();
+  // Get stats from database
+  const [
+    totalScansDb,
+    blockedCountDb,
+    recentScansLast24h,
+    feedbackStats
+  ] = await Promise.all([
+    prisma.scan.count(),
+    prisma.scan.count({ where: { action: 'block' } }),
+    prisma.scan.count({
+      where: {
+        createdAt: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+        }
+      }
+    }),
+    getFeedbackStats()
+  ]);
 
   return res.json({
-    totalScans: monitorStats.totalPredictions,
-    blockedCount: monitorStats.phishingCount,
-    allowedCount: monitorStats.legitimateCount,
-    blockRate: monitorStats.phishingRate,
+    totalScans: totalScansDb,
+    blockedCount: blockedCountDb,
+    allowedCount: totalScansDb - blockedCountDb,
+    blockRate: totalScansDb > 0 ? blockedCountDb / totalScansDb : 0,
     threatLevelDistribution: {
       low: (monitorStats.confidenceDistribution[0] || 0) + (monitorStats.confidenceDistribution[1] || 0),
       medium: monitorStats.confidenceDistribution[2] || 0,
@@ -40,10 +62,7 @@ export async function getStatsHandler(req, res) {
     driftStatus: monitorStats.drift,
     recentAlerts: monitorStats.recentAlerts,
     confidenceDistribution: monitorStats.confidenceDistribution,
-    recentScansLast24h: scans.filter(s => {
-      const ts = new Date(s.timestamp).getTime();
-      return Date.now() - ts < 24 * 60 * 60 * 1000;
-    }).length,
+    recentScansLast24h,
     totalFeedback: feedbackStats.total,
     falsePositiveReports: feedbackStats.falsePositives,
     falsePositiveRate: feedbackStats.falsePositiveRate,
