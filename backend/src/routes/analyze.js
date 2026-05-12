@@ -13,6 +13,7 @@ import { analyzeUrlEnsemble } from '../utils/featureExtraction.js';
 import { monitor } from '../utils/monitoring.js';
 import { createFeedback } from '../utils/feedbackRepository.js';
 import { SCAN_HISTORY_LIMIT, MODEL_VERSION } from '../utils/constants.js';
+import { logger } from '../utils/logger.js';
 
 // In-memory scan history (replace with database in production)
 export const scanHistory = new Map();
@@ -35,7 +36,7 @@ function cleanupOldScans() {
   scanHistory.clear();
   sorted.slice(removeCount).forEach(([k, v]) => scanHistory.set(k, v));
 
-  console.log(`[CLEANUP] Removed ${removeCount} old scans, ${scanHistory.size} remaining`);
+  logger.info(`Removed ${removeCount} old scans, ${scanHistory.size} remaining`, { component: 'cleanup' });
 }
 
 // Start periodic cleanup - using atomic operation to prevent race condition
@@ -48,7 +49,7 @@ function startPeriodicCleanup() {
     cleanupOldScans();
   }, CLEANUP_INTERVAL_MS);
 
-  console.log(`[CLEANUP] Periodic cleanup scheduled every ${CLEANUP_INTERVAL_MS / 60000} minutes`);
+  logger.info(`Periodic cleanup scheduled every ${CLEANUP_INTERVAL_MS / 60000} minutes`, { component: 'cleanup' });
 }
 
 /**
@@ -144,7 +145,7 @@ export async function analyzeUrlHandler(req, res) {
     });
     
   } catch (error) {
-    console.error('Analysis error:', error);
+    logger.error('Analysis error:', { error: error.message, stack: error.stack });
     return res.status(500).json({
       error: {
         code: 'ANALYSIS_ERROR',

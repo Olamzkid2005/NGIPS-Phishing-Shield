@@ -80,9 +80,10 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   crossOriginEmbedderPolicy: false
 }));
+const isProduction = process.env.NODE_ENV === 'production';
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ALLOWED_ORIGINS
+  origin: isProduction
+    ? (ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : false)
     : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
