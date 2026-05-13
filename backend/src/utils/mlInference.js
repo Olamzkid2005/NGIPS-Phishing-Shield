@@ -1,93 +1,80 @@
 /**
- * ML Inference Module - Python subprocess integration for phishing detection
- * Calls Python script that loads .pkl pipelines for exact tokenization match
+ * ML Inference Module - FastAPI HTTP client for phishing detection
+ * Calls the ML Service REST API instead of spawning subprocess
  */
 
-import { execFile, spawn } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import https from 'https';
+import http from 'http';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ML_SERVICE_DIR = path.join(__dirname, '../../../ml-service');
-const PREDICT_SCRIPT = path.join(ML_SERVICE_DIR, 'predict.py');
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8001';
+const ML_SERVICE_TIMEOUT = parseInt(process.env.ML_SERVICE_TIMEOUT || '30000');
 
-// Compiled regex patterns for performance
-const URL_SAFE_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9:.\/\-_]+$/;
 const DANGEROUS_CHARS_PATTERN = /[;&|`$<>]/;
-const IP_ADDRESS_PATTERN = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
-
-/**
- * Validate URL for shell execution (security check)
- * Uses URL constructor for primary validation, regex as fallback
- */
-function isValidUrlForShell(url) {
-  // First try URL constructor for robust validation
-  try {
-    new URL(url);
-    // If valid URL, check for dangerous characters
-    if (DANGEROUS_CHARS_PATTERN.test(url)) {
-      return false;
-    }
-    return true;
-  } catch {
-    // Fallback to regex for non-URL strings that might be paths
-    return URL_SAFE_PATTERN.test(url);
-  }
-}
 
 let modelLoadError = null;
 let modelsAvailable = false;
 
-const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
+function isValidUrlForShell(url) {
+  try {
+    new URL(url);
+    if (DANGEROUS_CHARS_PATTERN.test(url)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function fetchWithTimeout(url, options, timeout) {
+  const protocol = url.startsWith('https') ? https : http;
+  return new Promise((resolve, reject) => {
+    const req = protocol.request(url, options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
+    req.setTimeout(timeout);
+    req.end();
+  });
+}
 
 /**
- * Check if ML models and Python are available at startup
+ * Check if ML service is available at startup
  */
 export async function loadModels() {
   try {
-    if (!fs.existsSync(PREDICT_SCRIPT)) {
-      modelLoadError = 'predict.py not found';
-      console.warn('[ML] predict.py not found at:', PREDICT_SCRIPT);
-      return false;
+    const { status, data } = await fetchWithTimeout(
+      `${ML_SERVICE_URL}/health`,
+      { method: 'GET', headers: { 'Accept': 'application/json' } },
+      5000
+    );
+
+    if (status === 200) {
+      const health = JSON.parse(data);
+      modelsAvailable = health.models_loaded && health.models_loaded.length > 0;
+      if (modelsAvailable) {
+        console.log(`[ML] Service healthy at ${ML_SERVICE_URL}, models: ${health.models_loaded.join(', ')}`);
+      } else {
+        modelLoadError = 'ML service running but no models loaded';
+        console.warn('[ML] Service running in degraded mode — no models loaded');
+      }
+    } else {
+      modelLoadError = `ML service returned status ${status}`;
+      console.warn(`[ML] Health check failed: ${status}`);
     }
-
-    const modelsDir = path.join(ML_SERVICE_DIR, 'models');
-    const lrExists = fs.existsSync(path.join(modelsDir, 'logistic_regression_pipeline.pkl'));
-    const mnbExists = fs.existsSync(path.join(modelsDir, 'multinomial_nb_pipeline.pkl'));
-
-    if (!lrExists && !mnbExists) {
-      modelLoadError = 'No .pkl model files found';
-      console.warn('[ML] No .pkl model files found in:', modelsDir);
-      return false;
-    }
-
-    return new Promise((resolve) => {
-      execFile(PYTHON_CMD, ['--version'], { timeout: 5000 }, (error, stdout) => {
-        if (error) {
-          modelLoadError = 'Python not available';
-          console.warn('[ML] Python not available:', error.message);
-          resolve(false);
-        } else {
-          console.log('[ML] Python available:', stdout.trim());
-          modelsAvailable = true;
-          console.log(`[ML] Models: LR=${lrExists}, MNB=${mnbExists}`);
-          modelLoadError = null;
-          resolve(true);
-        }
-      });
-    });
+    return modelsAvailable;
   } catch (error) {
-    modelLoadError = error.message;
-    console.warn('[ML] Failed to initialize:', error.message);
+    modelLoadError = `ML service unavailable: ${error.message}`;
+    console.warn(`[ML] Cannot connect to ${ML_SERVICE_URL}: ${error.message}`);
     return false;
   }
 }
 
 /**
- * Run phishing prediction using Python subprocess
+ * Run phishing prediction via FastAPI ML service
  * @param {string} url - URL to classify
- * @returns {Promise<{success: boolean, data?: object, error?: string}>} - Structured result
+ * @returns {Promise<{success: boolean, data?: object, error?: string}>}
  */
 export async function predictPhishing(url) {
   if (!modelsAvailable) {
@@ -99,84 +86,43 @@ export async function predictPhishing(url) {
     return { success: false, error: 'Invalid URL format' };
   }
 
-  return new Promise((resolve) => {
-    const env = { ...process.env, PYTHONUNBUFFERED: '1' };
+  try {
+    const body = JSON.stringify({ url });
+    const { status, data } = await fetchWithTimeout(
+      `${ML_SERVICE_URL}/predict`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      },
+      ML_SERVICE_TIMEOUT
+    );
 
-    const proc = spawn(PYTHON_CMD, [PREDICT_SCRIPT, url], {
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true
-    });
+    if (status === 200) {
+      const result = JSON.parse(data);
+      console.log(`[ML] Inference ${result.processing_time_ms}ms | LR=${result.model_scores.logistic_regression} MNB=${result.model_scores.multinomial_nb} → ${result.confidence}`);
+      return {
+        success: true,
+        data: {
+          is_phishing: result.is_phishing,
+          confidence: result.confidence,
+          ml_confidence: result.confidence,
+          model_scores: result.model_scores,
+          latency_ms: result.processing_time_ms,
+          model_version: 'ensemble-1.0.0',
+        },
+      };
+    }
 
-    let stdout = '';
-    let stderr = '';
-    let resolved = false;
-
-    proc.stdout.on('data', (data) => { stdout += data.toString(); });
-    proc.stderr.on('data', (data) => { stderr += data.toString(); });
-
-    proc.on('error', (error) => {
-      if (!resolved) {
-        resolved = true;
-        console.error(`[ML] Prediction error for URL: ${url.substring(0, 50)}... - ${error.message}`);
-        resolve({ success: false, error: `Process error: ${error.message}` });
-      }
-    });
-
-    const timeout = setTimeout(() => {
-      // Force kill on both Windows and Unix - SIGKILL cannot be caught
-      proc.kill('SIGKILL');
-      if (!resolved) {
-        resolved = true;
-        console.error('[ML] Prediction timed out for URL:', url);
-        resolve({ success: false, error: 'Prediction timeout (30s)' });
-      }
-    }, 30000);
-
-    proc.on('close', (code) => {
-      clearTimeout(timeout);
-      if (resolved) return;
-      resolved = true;
-
-      if (stdout && stdout.trim()) {
-        try {
-          const result = JSON.parse(stdout.trim());
-
-          if (result.success) {
-            console.log(`[ML] Inference ${result.latency_ms}ms | LR=${result.model_scores.logistic_regression} MNB=${result.model_scores.multinomial_nb} → ${result.confidence}`);
-            resolve({
-              success: true,
-              data: {
-                is_phishing: result.is_phishing,
-                confidence: result.confidence,
-                ml_confidence: result.ml_confidence,
-                model_scores: result.model_scores,
-                latency_ms: result.latency_ms,
-                model_version: result.model_version
-              }
-            });
-            return;
-          } else {
-            console.error('[ML] Prediction failed:', result.error);
-            resolve({ success: false, error: result.error });
-            return;
-          }
-        } catch (parseError) {
-          console.error('[ML] Failed to parse Python output:', stdout.substring(0, 200));
-          resolve({ success: false, error: 'Failed to parse ML response' });
-        }
-      }
-
-      if (code !== 0) {
-        console.error('[ML] Prediction process exited with code:', code);
-        if (stderr) {
-          console.error('[ML] stderr:', stderr.substring(0, 500));
-        }
-      }
-
-      resolve({ success: false, error: `Process exited with code ${code}` });
-    });
-  });
+    const errorBody = data ? JSON.parse(data) : {};
+    console.error(`[ML] Prediction failed: ${errorBody.detail || `HTTP ${status}`}`);
+    return { success: false, error: errorBody.detail || `ML service error (${status})` };
+  } catch (error) {
+    console.error(`[ML] Prediction error for ${url.substring(0, 50)}: ${error.message}`);
+    return { success: false, error: `ML service error: ${error.message}` };
+  }
 }
 
 /**
@@ -185,7 +131,7 @@ export async function predictPhishing(url) {
 export function getMLStatus() {
   return {
     loaded: modelsAvailable,
-    method: 'python-subprocess',
-    error: modelLoadError
+    method: 'fastapi-http',
+    error: modelLoadError,
   };
 }
