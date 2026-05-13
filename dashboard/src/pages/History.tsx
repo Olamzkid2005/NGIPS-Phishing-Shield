@@ -66,7 +66,7 @@ const History: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Export failed:', error);
+      if (process.env.NODE_ENV === 'development') console.error('Export failed:', error);
       alert('Failed to export CSV');
     }
   }

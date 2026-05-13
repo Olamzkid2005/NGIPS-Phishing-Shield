@@ -8,21 +8,24 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source
+# Copy all source
 COPY . .
 
-# Build
+# Build Next.js standalone output
 RUN npm run build
 
-# Production
-FROM nginx:alpine
+# Production image
+FROM node:20-alpine AS runner
 
-# Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV NODE_ENV=production
+
+# Copy standalone output from builder
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.js"]

@@ -75,7 +75,7 @@ const Settings: React.FC = () => {
       await apiService.post('/v1/admin/calibrate', undefined, getAdminHeaders());
       alert('Baseline calibrated');
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Calibration failed:', error);
+      if (process.env.NODE_ENV === 'development') console.error('Calibration failed:', error);
       alert('Calibration failed');
     } finally {
       setRecalibrating(false);
@@ -89,7 +89,7 @@ const Settings: React.FC = () => {
       await apiService.post('/v1/admin/retrain', undefined, getAdminHeaders());
       alert('Retraining started');
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Retraining failed:', error);
+      if (process.env.NODE_ENV === 'development') console.error('Retraining failed:', error);
       alert('Retraining failed');
     } finally {
       setRetraining(false);
@@ -122,7 +122,7 @@ const Settings: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Export failed:', err);
+      if (process.env.NODE_ENV === 'development') console.error('Export failed:', err);
     } finally {
       setExporting(false);
     }
@@ -135,7 +135,7 @@ const Settings: React.FC = () => {
       await apiService.post('/v1/admin/clear-history', undefined, getAdminHeaders());
       alert('History cleared successfully');
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Clear history failed:', error);
+      if (process.env.NODE_ENV === 'development') console.error('Clear history failed:', error);
       alert('Failed to clear history');
     } finally {
       setClearing(false);

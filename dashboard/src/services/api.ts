@@ -23,7 +23,7 @@ import type {
   Pagination,
 } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_VITE_API_BASE_URL || 'http://localhost:8000';
 
 const getAuthToken = (): string | null => {
   try {
@@ -54,7 +54,7 @@ class ApiService {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        if (import.meta.env.DEV) {
+        if (process.env.NODE_ENV === 'development') {
           console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
         }
         return config;
@@ -65,7 +65,7 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        if (import.meta.env.DEV) console.error('[API Error]', error.message);
+        if (process.env.NODE_ENV === 'development') console.error('[API Error]', error.message);
         return Promise.reject(this.handleError(error));
       }
     );
