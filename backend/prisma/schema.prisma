@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Scan records from URL analysis
+model Scan {
+  id            String   @id
+  url           String
+  action        String   // "block" or "allow"
+  confidence   Float
+  threatLevel  String   // "low", "medium", "high", "critical"
+  reasons      String   // JSON array stored as string
+  modelVersion String
+  processingTime Int
+  createdAt   DateTime @default(now())
+
+  // Indexes for common query patterns
+  @@index([createdAt])
+  @@index([action])
+  @@index([threatLevel])
+}
+
+// User feedback on scan results
+model Feedback {
+  id              String   @id
+  scanId          String
+  isFalsePositive Boolean
+  userComment    String?
+  status         String   // "pending", "reviewed", "actioned"
+  createdAt      DateTime @default(now())
+
+  @@index([scanId])
+  @@index([status])
+}
+
+// User accounts for authentication
+model User {
+  id           String   @id
+  email        String   @unique
+  passwordHash String
+  role         String   @default("user") // "user", "admin"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+}
+
+// Refresh tokens for auth
+model RefreshToken {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+
+  @@index([userId])
+  @@index([token])
+}
