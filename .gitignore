@@ -8,9 +8,6 @@ backend/models/*.pkl.*
 backend/models/ensemble_20260416_170709.pkl
 backend/models/random_forest_20260416_170709.pkl
 
-# Dashboard
-dashboard/
-
 # Environment and secrets
 .env
 .env.local
