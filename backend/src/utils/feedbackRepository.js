@@ -27,7 +27,8 @@ export async function createFeedback(data) {
   try {
     await prisma.feedback.create({ data: feedbackData });
   } catch (dbError) {
-    logger.warn('[FEEDBACK] DB persist failed, using in-memory', { error: dbError.message });
+    logger.error('[FEEDBACK] DB persist failed', { error: dbError.message });
+    throw new Error(`Failed to persist feedback: ${dbError.message}`);
   }
 
   return {

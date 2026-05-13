@@ -129,17 +129,17 @@ def build_hybrid_pipeline(classifier, calibrate: bool = True):
 # ---------- Hyperparameter Grids ----------
 
 LR_PARAM_GRID = {
-    'classifier__estimator__C': [0.1, 0.5, 1.0, 5.0, 10.0],
-    'classifier__estimator__penalty': ['l2'],
-    'classifier__estimator__solver': ['lbfgs', 'saga'],
-    'classifier__estimator__class_weight': [None, 'balanced'],
+    'classifier__base_estimator__C': [0.1, 0.5, 1.0, 5.0, 10.0],
+    'classifier__base_estimator__penalty': ['l2'],
+    'classifier__base_estimator__solver': ['lbfgs', 'saga'],
+    'classifier__base_estimator__class_weight': [None, 'balanced'],
     'features__text__vectorizer__max_features': [30000, 50000],
     'features__text__vectorizer__ngram_range': [(1, 1), (1, 2)],
 }
 
 NB_PARAM_GRID = {
-    'classifier__estimator__alpha': [0.01, 0.1, 0.5, 1.0, 2.0],
-    'classifier__estimator__fit_prior': [True, False],
+    'classifier__base_estimator__alpha': [0.01, 0.1, 0.5, 1.0, 2.0],
+    'classifier__base_estimator__fit_prior': [True, False],
     'features__text__vectorizer__max_features': [30000, 50000],
     'features__text__vectorizer__ngram_range': [(1, 1), (1, 2)],
 }

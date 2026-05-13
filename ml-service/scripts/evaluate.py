@@ -59,18 +59,25 @@ def load_test_data(data_path):
 def evaluate(model, X_test, y_test):
     preds = model.predict(X_test)
 
+    # Determine pos_label once (supports both string and integer labels)
+    unique_labels = set(y_test.unique()) if hasattr(y_test, 'unique') else set(y_test)
+    if 'bad' in unique_labels:
+        pos_label = 'bad'
+    else:
+        pos_label = 1
+
     acc = accuracy_score(y_test, preds)
 
     try:
         proba = model.predict_proba(X_test)
         classes = list(model.classes_)
-        bad_idx = classes.index('bad') if 'bad' in classes else classes.index(1)
+        bad_idx = classes.index(pos_label)
         roc_auc = roc_auc_score(y_test, proba[:, bad_idx], multi_class='ovr')
     except Exception:
         roc_auc = None
 
     precision, recall, f1, _ = precision_recall_fscore_support(
-        y_test, preds, average='binary', pos_label='bad'
+        y_test, preds, average='binary', pos_label=pos_label
     )
 
     cm = confusion_matrix(y_test, preds).tolist()

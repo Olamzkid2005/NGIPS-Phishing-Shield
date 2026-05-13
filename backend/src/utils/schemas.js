@@ -49,16 +49,10 @@ export const FeedbackSchema = z.object({
  * GET /v1/scans
  */
 export const PaginationSchema = z.object({
-  page: z.string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .pipe(z.number().int().min(1))
+  page: z.union([z.string().regex(/^\d+$/).transform(Number), z.number().int().min(1)])
     .optional()
     .default(1),
-  limit: z.string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .pipe(z.number().int().min(1).max(100))
+  limit: z.union([z.string().regex(/^\d+$/).transform(Number), z.number().int().min(1).max(100)])
     .optional()
     .default(50),
   action: z.enum(['block', 'allow']).optional(),

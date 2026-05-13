@@ -45,12 +45,15 @@ export async function getStatsHandler(req, res) {
     blockedCount: blockedCountDb,
     allowedCount: totalScansDb - blockedCountDb,
     blockRate: totalScansDb > 0 ? blockedCountDb / totalScansDb : 0,
-    threatLevelDistribution: {
-      low: (monitorStats.confidenceDistribution[0] || 0) + (monitorStats.confidenceDistribution[1] || 0),
-      medium: monitorStats.confidenceDistribution[2] || 0,
-      high: monitorStats.confidenceDistribution[3] || 0,
-      critical: monitorStats.confidenceDistribution[4] || 0
-    },
+    threatLevelDistribution: (() => {
+      const d = monitorStats.confidenceDistribution || [];
+      return {
+        low: (d[0] ?? 0) + (d[1] ?? 0),
+        medium: d[2] ?? 0,
+        high: d[3] ?? 0,
+        critical: d[4] ?? 0,
+      };
+    })(),
     avgConfidence: monitorStats.avgConfidence,
     mlModelStatus: {
       status: mlStatus.loaded ? 'loaded' : 'unavailable',

@@ -78,6 +78,8 @@ class Vectorizer {
   }
 
   tokenize(url) {
+    // NOTE: Matches Python RegexpTokenizer(r'[A-Za-z]+') — drops numbers, IPs, ports.
+    // This matches sklearn's CountVectorizer used in training exactly.
     return (url.toLowerCase().match(/[a-z]+/g) || []);
   }
 

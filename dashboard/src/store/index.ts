@@ -5,6 +5,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+let notificationTimer = null;
 import type { 
   AnalysisResult, 
   ScanRecord, 
@@ -139,8 +141,12 @@ export const useAppStore = create<AppState>()(
       setError: (error) => set({ error }),
       
       showNotification: (message, type) => {
+        if (notificationTimer) clearTimeout(notificationTimer);
         set({ notification: { message, type } });
-        setTimeout(() => get().clearNotification(), 5000);
+        notificationTimer = setTimeout(() => {
+          get().clearNotification();
+          notificationTimer = null;
+        }, 5000);
       },
       
       clearNotification: () => set({ notification: null }),

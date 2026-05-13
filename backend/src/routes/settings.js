@@ -28,7 +28,7 @@ export async function updateSettingsHandler(req, res) {
   
   if (autoRefresh !== undefined) {
     if (typeof autoRefresh !== 'boolean') {
-      throw new ValidationError('autoRefresh must be a boolean');
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'autoRefresh must be a boolean' } });
     }
     settings.autoRefresh = autoRefresh;
   }
@@ -36,21 +36,21 @@ export async function updateSettingsHandler(req, res) {
   if (refreshInterval !== undefined) {
     const numInterval = Number(refreshInterval);
     if (isNaN(numInterval) || numInterval < 5 || numInterval > 300) {
-      throw new ValidationError('refreshInterval must be a number between 5 and 300');
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'refreshInterval must be a number between 5 and 300' } });
     }
     settings.refreshInterval = numInterval;
   }
   
   if (notifications !== undefined) {
     if (typeof notifications !== 'boolean') {
-      throw new ValidationError('notifications must be a boolean');
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'notifications must be a boolean' } });
     }
     settings.notifications = notifications;
   }
   
   if (theme !== undefined) {
     if (typeof theme !== 'string' || !['light', 'dark', 'system'].includes(theme)) {
-      throw new ValidationError('theme must be one of: light, dark, system');
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'theme must be one of: light, dark, system' } });
     }
     settings.theme = theme;
   }
