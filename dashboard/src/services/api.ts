@@ -210,8 +210,10 @@ class ApiService {
     return response.data;
   }
 
-  async post<T = unknown>(url: string, data?: unknown): Promise<T> {
-    const response = await this.client.post<T>(url, data);
+  async post<T = unknown>(url: string, data?: unknown, headers?: Record<string, string>): Promise<T> {
+    const config: Record<string, unknown> = {};
+    if (headers) config.headers = headers;
+    const response = await this.client.post<T>(url, data, config);
     return response.data;
   }
 

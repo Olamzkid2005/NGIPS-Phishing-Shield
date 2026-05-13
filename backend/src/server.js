@@ -7,8 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import crypto from 'crypto';
-import { timingSafeEqual } from 'crypto';
+import crypto, { timingSafeEqual } from 'crypto';
 import { errorHandler } from './utils/errors.js';
 import { authMiddleware } from './utils/auth.js';
 import { logger } from './utils/logger.js';
@@ -90,7 +89,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -103,8 +102,6 @@ const limiter = rateLimit({
     }
   }
 });
-app.use('/v1/', limiter);
-
 // Login-specific rate limiter
 const loginLimiter = rateLimit({
   windowMs: LOGIN_RATE_LIMIT_WINDOW_MS,
@@ -203,7 +200,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     service: 'ngips-phishing-shield',
-    version,
+    appVersion: VERSION,
     models: {
       status: mlStatus.loaded ? 'loaded' : 'unavailable',
       method: mlStatus.method,
@@ -219,7 +216,7 @@ app.get('/v1/models/status', (req, res) => {
   const mlStatus = getMLStatus();
   res.json({
     ml: mlStatus,
-    heuristic: { loaded: true, version }
+    heuristic: { loaded: true, version: VERSION }
   });
 });
 
@@ -227,7 +224,7 @@ app.get('/v1/models/status', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     name: 'NGIPS Phishing Shield API',
-    version,
+    version: VERSION,
     status: 'operational',
     docs: '/docs'
   });
@@ -247,6 +244,9 @@ function extensionOrAuth(req, res, next) {
   if (extensionId && origin === `chrome-extension://${extensionId}`) return next();
   return authMiddleware(req, res, next);
 }
+
+// General rate limiter for non-auth API routes
+app.use('/v1/', limiter);
 
 // API Routes (public)
 app.post('/v1/analyze', extensionOrAuth, (req, res, next) => analyzeUrlHandler(req, res).catch(next));

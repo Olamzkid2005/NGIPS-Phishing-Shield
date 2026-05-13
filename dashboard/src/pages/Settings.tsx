@@ -2,9 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import type { ApiHealth, DashboardSettings } from '../types';
 
+function getAdminHeaders(): Record<string, string> {
+  try {
+    const stored = localStorage.getItem('ngips-admin-key');
+    if (stored) return { 'x-api-key': JSON.parse(stored) };
+  } catch { /* ignore */ }
+  return {};
+}
+
 const Settings: React.FC = () => {
   const [health, setHealth] = useState<ApiHealth | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
+  const [adminApiKey, setAdminApiKey] = useState('');
 
   // Settings state
   const [theme, setTheme] = useState<DashboardSettings['theme']>('system');
@@ -36,14 +45,16 @@ const Settings: React.FC = () => {
         if (parsed.autoRefresh !== undefined) setAutoRefresh(parsed.autoRefresh);
         if (parsed.refreshInterval) setRefreshInterval(parsed.refreshInterval);
         if (parsed.notifications) setNotifications(parsed.notifications);
+        if (parsed.adminApiKey) setAdminApiKey(parsed.adminApiKey);
       } catch { /* ignore */ }
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('ngips-dashboard-settings', JSON.stringify({
-      theme, autoRefresh, refreshInterval, notifications,
+      theme, autoRefresh, refreshInterval, notifications, adminApiKey,
     }));
+    localStorage.setItem('ngips-admin-key', JSON.stringify(adminApiKey));
   }, [theme, autoRefresh, refreshInterval, notifications]);
 
   async function checkHealth() {
@@ -61,7 +72,7 @@ const Settings: React.FC = () => {
   async function handleRecalibrate() {
     setRecalibrating(true);
     try {
-      await apiService.post('/v1/admin/calibrate');
+      await apiService.post('/v1/admin/calibrate', undefined, getAdminHeaders());
       alert('Baseline calibrated');
     } catch (error) {
       if (import.meta.env.DEV) console.error('Calibration failed:', error);
@@ -75,7 +86,7 @@ const Settings: React.FC = () => {
     if (!window.confirm('Trigger model retraining?')) return;
     setRetraining(true);
     try {
-      await apiService.post('/v1/admin/retrain');
+      await apiService.post('/v1/admin/retrain', undefined, getAdminHeaders());
       alert('Retraining started');
     } catch (error) {
       if (import.meta.env.DEV) console.error('Retraining failed:', error);
@@ -121,7 +132,7 @@ const Settings: React.FC = () => {
     if (!window.confirm('Are you sure you want to clear all scan history? This action cannot be undone.')) return;
     setClearing(true);
     try {
-      await apiService.post('/v1/admin/clear-history');
+      await apiService.post('/v1/admin/clear-history', undefined, getAdminHeaders());
       alert('History cleared successfully');
     } catch (error) {
       if (import.meta.env.DEV) console.error('Clear history failed:', error);

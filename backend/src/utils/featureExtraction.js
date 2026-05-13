@@ -163,6 +163,7 @@ function extractFeatures(url) {
 
   const domainInfo = extractDomainInfo(normalizedUrl);
   const charCounts = countCharacters(url);
+  const { specialCharCount } = charCounts;
   const patterns = countPatterns(url);
 
   // Check for port
@@ -429,9 +430,9 @@ async function analyzeUrlEnsemble(url) {
     }
 
     // Add individual model scores if divergent
-    const lrScore = mlResult.data.model_scores?.logistic_regression ?? 0;
-    const mnbScore = mlResult.data.model_scores?.multinomial_nb ?? 0;
-    if (Math.abs(lrScore - mnbScore) > 0.3) {
+    const lrScore = mlResult.data.model_scores?.logistic_regression;
+    const mnbScore = mlResult.data.model_scores?.multinomial_nb;
+    if (lrScore != null && mnbScore != null && Math.abs(lrScore - mnbScore) > 0.3) {
       finalReasons.push(`Model divergence: LR=${(lrScore * 100).toFixed(1)}% vs MNB=${(mnbScore * 100).toFixed(1)}%`);
     }
   } else {

@@ -64,7 +64,7 @@ const Analyzer: React.FC = () => {
     switch (level) {
       case 'critical': return 'error';
       case 'high': return 'warning';
-      case 'medium': return 'info';
+      case 'medium': return 'warning';
       case 'low': return 'check_circle';
     }
   }

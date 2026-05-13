@@ -12,7 +12,7 @@ const Feedback: React.FC = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitScanId, setSubmitScanId] = useState('');
   const [submitComment, setSubmitComment] = useState('');
-  const [submitIsFalsePositive, setSubmitIsFalsePositive] = useState(false);
+  const [submitIsFalsePositive, setSubmitIsFalsePositive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {

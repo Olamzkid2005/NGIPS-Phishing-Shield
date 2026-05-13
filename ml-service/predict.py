@@ -29,7 +29,10 @@ except LookupError:
 try:
     nltk.data.find('tokenizers/punkt_tab')
 except LookupError:
-    nltk.download('punkt_tab', quiet=True)
+    try:
+        nltk.download('punkt_tab', quiet=True)
+    except Exception:
+        pass
 
 
 class URLTokenizer:

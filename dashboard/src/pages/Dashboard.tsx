@@ -131,7 +131,7 @@ const Dashboard: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Block Rate</p>
               <p className="mt-1 text-3xl font-bold text-warning-600">
-                {stats?.blockRate?.toFixed(1) || 0}%
+                {stats?.blockRate != null ? (stats.blockRate * 100).toFixed(1) : 0}%
               </p>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 <span className="text-safe-600">{stats?.avgConfidence ? `${(stats.avgConfidence * 100).toFixed(0)}%` : 'N/A'}</span> avg confidence
@@ -275,7 +275,7 @@ const Dashboard: React.FC = () => {
                     <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                       <div
                         className="h-full rounded-full bg-danger-500"
-                        style={{ width: `${stats?.blockRate || 0}%` }}
+                        style={{ width: `${((stats?.blockRate ?? 0) * 100)}%` }}
                       />
                     </div>
                   </div>
@@ -287,7 +287,7 @@ const Dashboard: React.FC = () => {
                     <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                       <div
                         className="h-full rounded-full bg-safe-500"
-                        style={{ width: `${100 - (stats?.blockRate || 0)}%` }}
+                        style={{ width: `${100 - ((stats?.blockRate ?? 0) * 100)}%` }}
                       />
                     </div>
                   </div>

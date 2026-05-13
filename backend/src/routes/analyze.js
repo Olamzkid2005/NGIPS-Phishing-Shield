@@ -272,7 +272,7 @@ export async function submitFeedbackHandler(req, res) {
     });
   }
   
-  const scan = scanHistory.get(scanId);
+  const scan = await scanHistory.getById(scanId);
 
   if (!scan) {
     return res.status(404).json({
@@ -289,10 +289,6 @@ export async function submitFeedbackHandler(req, res) {
     userComment: userComment || null
   });
 
-  // Persist feedback on the scan
-  scan.feedback = feedback;
-
-  scan.feedbackCorrect = isFalsePositive ? 0 : 1;
   monitor.addAlert({
     type: 'FEEDBACK_RECEIVED',
     scanId,

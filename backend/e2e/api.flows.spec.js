@@ -174,8 +174,8 @@ describe('E2E API Flows', () => {
       const historyRes = await api.get('/v1/scans');
 
       expect(historyRes.status).toBe(200);
-      expect(Array.isArray(historyRes.data.scans)).toBe(true);
-      expect(historyRes.data.scans.length).toBeGreaterThan(0);
+      expect(Array.isArray(historyRes.data.data)).toBe(true);
+      expect(historyRes.data.data.length).toBeGreaterThan(0);
     });
 
     it('should retrieve specific scan by id', async () => {
@@ -194,7 +194,7 @@ describe('E2E API Flows', () => {
       const res = await api.get('/v1/scans?action=block');
 
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.data.scans)).toBe(true);
+      expect(Array.isArray(res.data.data)).toBe(true);
     });
 
     it('should support pagination', async () => {
@@ -234,11 +234,11 @@ describe('E2E API Flows', () => {
       });
 
       expect(res.status).toBe(200);
-      expect(res.data).toHaveProperty('theme');
+      expect(res.data).toHaveProperty('autoRefresh');
     });
 
     it('should update settings with auth', async () => {
-      const res = await api.put('/v1/settings',
+      const res = await api.patch('/v1/settings',
         { theme: 'light' },
         { 'Authorization': `Bearer ${token}` }
       );
@@ -313,7 +313,7 @@ describe('E2E API Flows', () => {
       const res = await api.get('/health');
 
       expect(res.status).toBe(200);
-      expect(res.data.status).toBe('ok');
+      expect(res.data.status).toBe('healthy');
     });
   });
 });
