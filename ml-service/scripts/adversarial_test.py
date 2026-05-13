@@ -18,6 +18,7 @@ import os
 import sys
 import warnings
 from datetime import datetime
+from pathlib import Path
 
 warnings.filterwarnings("ignore")
 os.environ["PYTHONWARNINGS"] = "ignore"
@@ -30,8 +31,11 @@ from sklearn.metrics import accuracy_score
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from features import extract_features, feature_matrix
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from app.config import MODEL_FILES
+MODELS_DIR = Path(__file__).resolve().parent.parent / 'models'
+MODEL_FILES = {
+    'logistic_regression': MODELS_DIR / 'logistic_regression_pipeline.pkl',
+    'multinomial_nb': MODELS_DIR / 'multinomial_nb_pipeline.pkl',
+}
 
 
 # ---------- Adversarial Test Cases ----------
@@ -115,24 +119,19 @@ def load_model(model_path=None):
 
 
 def evaluate_on_test_set(model, urls, expected_half):
-    if isinstance(model, dict):
-        preds = []
-        for u in urls:
-            try:
-                from predict import predict as p
-                result = p(u, model)
-                preds.append(1 if result.get('is_phishing') else 0)
-            except Exception:
-                preds.append(0)
-    else:
-        preds = model.predict(urls)
-        classes = model.classes_ if hasattr(model, 'classes_') else ['good', 'bad']
-        preds = [1 if p == 'bad' or p == 1 else 0 for p in preds]
+    preds = model.predict(urls)
+    classes = list(model.classes_) if hasattr(model, 'classes_') else ['good', 'bad']
+    preds_binary = []
+    for p in preds:
+        if p == 'bad' or p == 1:
+            preds_binary.append(1)
+        else:
+            preds_binary.append(0)
 
     expected = [1] * len(urls) if expected_half else [0] * len(urls)
-    acc = accuracy_score(expected, preds)
-    correct = sum(1 for e, p in zip(expected, preds) if e == p)
-    return acc, correct, len(urls), preds
+    acc = accuracy_score(expected, preds_binary)
+    correct = sum(1 for e, p in zip(expected, preds_binary) if e == p)
+    return acc, correct, len(urls), preds_binary
 
 
 def run_all_tests(model):

@@ -26,6 +26,7 @@ import type {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
   try {
     const stored = localStorage.getItem('ngips-storage');
     if (stored) {

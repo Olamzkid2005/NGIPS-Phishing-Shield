@@ -11,7 +11,6 @@
 
 import { monitor } from '../utils/monitoring.js';
 import { getMLStatus } from '../utils/mlInference.js';
-import { scanHistory } from './analyze.js';
 import { getFeedbackStats } from '../utils/feedbackRepository.js';
 import { prisma } from '../utils/database.js';
 

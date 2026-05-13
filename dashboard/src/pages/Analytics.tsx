@@ -274,7 +274,7 @@ const Analytics: React.FC = () => {
                         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                           <div
                             className="h-full rounded-full bg-danger-500"
-                            style={{ width: `${(domain.count / maxDomainCount) * 100}%` }}
+                            style={{ width: `${maxDomainCount > 0 ? (domain.count / maxDomainCount) * 100 : 0}%` }}
                           />
                         </div>
                       </div>

@@ -28,10 +28,12 @@ export async function createFeedback(data) {
     await prisma.feedback.create({ data: feedbackData });
   } catch (dbError) {
     logger.warn('[FEEDBACK] DB persist failed, using in-memory', { error: dbError.message });
-    feedbackData.createdAt = feedbackData.createdAt.toISOString();
   }
 
-  return { ...feedbackData, createdAt: feedbackData.createdAt.toISOString() };
+  return {
+    ...feedbackData,
+    createdAt: feedbackData.createdAt instanceof Date ? feedbackData.createdAt.toISOString() : String(feedbackData.createdAt),
+  };
 }
 
 /**

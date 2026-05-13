@@ -52,11 +52,15 @@ export const PaginationSchema = z.object({
   page: z.string()
     .regex(/^\d+$/)
     .transform(Number)
-    .pipe(z.number().int().min(1).default(1)),
+    .pipe(z.number().int().min(1))
+    .optional()
+    .default(1),
   limit: z.string()
     .regex(/^\d+$/)
     .transform(Number)
-    .pipe(z.number().int().min(1).max(100).default(50)),
+    .pipe(z.number().int().min(1).max(100))
+    .optional()
+    .default(50),
   action: z.enum(['block', 'allow']).optional(),
   url_contains: z.string().max(100).optional()
 });

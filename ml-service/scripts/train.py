@@ -84,15 +84,7 @@ def load_dataset(use_feedback: bool = True):
     return df
 
 
-def load_original_dataframe():
-    project_root = get_project_root()
-    csv_path = os.path.join(project_root, 'Dataset', 'phishing_site_urls Combined.csv')
-    df = pd.read_csv(csv_path)
-    df = df.dropna(subset=['URL', 'Label'])
-    df['URL'] = df['URL'].astype(str)
-    df = df[df['URL'].str.strip() != '']
-    df['Label'] = df['Label'].map({'bad': 1, 'good': 0})
-    return df
+
 
 
 # ---------- Hybrid Feature Pipeline ----------
@@ -346,6 +338,8 @@ def main():
             use_grid_search=not args.quick,
             df_full=df,
         )
+        if args.no_calibrate and hasattr(pipeline.named_steps['classifier'], 'base_estimator'):
+            pipeline.named_steps['classifier'] = pipeline.named_steps['classifier'].base_estimator
         model_hash = compute_model_hash(pipeline)
         models[name] = pipeline
         all_metrics[name] = metrics

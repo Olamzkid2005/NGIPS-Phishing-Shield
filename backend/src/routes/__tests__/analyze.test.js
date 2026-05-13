@@ -2,11 +2,12 @@ process.env.NODE_ENV = 'test';
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../../server.js';
-import { scanHistory } from '../analyze.js';
+import { prisma } from '../../utils/database.js';
 
 describe('Analyze API', () => {
-  beforeEach(() => {
-    scanHistory.clear();
+  beforeEach(async () => {
+    await prisma.scan.deleteMany();
+    await prisma.feedback.deleteMany();
   });
 
   describe('POST /v1/analyze', () => {

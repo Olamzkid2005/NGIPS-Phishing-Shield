@@ -130,7 +130,7 @@ def extract_features(url: str) -> Optional[dict]:
     pats = count_patterns(url)
     found_keywords = detect_suspicious_keywords(url)
 
-    has_port = bool(re.search(r':\d+', parsed.hostname or ''))
+    has_port = 1 if parsed.port is not None else 0
     entropy = shannon_entropy(parsed.hostname or '')
     path_depth = len([p for p in (parsed.path or '').split('/') if p])
     is_suspicious_tld = domain_info['tld'] in SUSPICIOUS_TLDS

@@ -95,15 +95,18 @@ class ModelMonitor {
 
     if (result.drifted) {
       const lastAlert = this.alerts[this.alerts.length - 1];
-      if (!lastAlert || lastAlert.type !== 'DRIFT_DETECTED' || Date.now() - lastAlert.timestamp > 300000) {
+    const lastAlertTs = lastAlert ? (typeof lastAlert.timestamp === 'number' ? lastAlert.timestamp : new Date(lastAlert.timestamp).getTime()) : 0;
+    if (!lastAlert || lastAlert.type !== 'DRIFT_DETECTED' || Date.now() - lastAlertTs > 300000) {
         this.addAlert({
           type: 'DRIFT_DETECTED',
           psi: result.psi,
           message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
         });
         if (this.onDriftCallback) {
-          this.onDriftCallback(result.psi).catch(err => {
-            console.error('[MONITOR] Auto-retrain callback failed:', err.message);
+          Promise.resolve(this.onDriftCallback(result.psi)).catch(err => {
+            if (err instanceof Error) {
+              console.error('[MONITOR] Auto-retrain callback failed:', err.message);
+            }
           });
         }
       }

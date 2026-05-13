@@ -27,7 +27,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from features import FEATURE_NAMES, extract_features, feature_matrix
+from features import FEATURE_NAMES, feature_matrix
 
 
 def get_project_root():
@@ -109,8 +109,8 @@ def main():
     print("=" * 60)
 
     df = pd.read_csv(os.path.join(get_project_root(), 'Dataset', 'phishing_site_urls Combined.csv'))
-    df = df.dropna()
-    df['Label'] = df['Label'].map({'bad': 1, 'good': 0})
+    df = df.dropna(subset=['URL', 'Label'])
+    df['Label'] = df['Label'].map({'bad': 1, 'good': 0}).fillna(0)
 
     X_text = df['URL'].values
     y = df['Label'].values.astype(np.float32)

@@ -48,9 +48,10 @@ function getDailyData(filteredScans, days, dayMs, now) {
     scansByDay.set(dayStart, existing);
   }
 
-  // Build daily data (O(days))
+  // Build daily data (O(days)) - align to midnight boundaries
+  const midnightToday = Math.floor(now / dayMs) * dayMs;
   for (let i = days - 1; i >= 0; i--) {
-    const dayStart = now - i * dayMs;
+    const dayStart = midnightToday - i * dayMs;
     const dayData = scansByDay.get(dayStart) || { total: 0, blocked: 0 };
 
     dailyData.push({
@@ -83,9 +84,10 @@ function getWeeklyData(filteredScans, days, weekMs, now) {
     scansByWeek.set(weekStart, existing);
   }
 
-  // Build weekly data (O(weeks))
+  // Build weekly data (O(weeks)) - align to week boundaries
+  const weekAnchor = Math.floor(now / weekMs) * weekMs;
   for (let i = weeksToShow - 1; i >= 0; i--) {
-    const weekStart = now - i * weekMs;
+    const weekStart = weekAnchor - i * weekMs;
     const weekData = scansByWeek.get(weekStart) || { total: 0, blocked: 0 };
 
     weeklyData.push({
@@ -174,13 +176,18 @@ export async function getThreatClassificationHandler(req, res) {
 
   for (const scan of scans) {
     if (scan.action === 'block') {
-      const reasons = typeof scan.reasons === 'string' ? JSON.parse(scan.reasons) : [];
+      let reasons;
+      try {
+        reasons = typeof scan.reasons === 'string' ? JSON.parse(scan.reasons) : (Array.isArray(scan.reasons) ? scan.reasons : []);
+      } catch {
+        reasons = [];
+      }
       const reasonStr = Array.isArray(reasons) ? reasons.join(' ').toLowerCase() : '';
 
       if (reasonStr.includes('phishing')) typeCounts.phishing++;
-      else if (reasonStr.includes('malware') || reasonStr.includes('malicious')) typeCounts.malware++;
-      else if (reasonStr.includes('spam')) typeCounts.spam++;
-      else typeCounts.suspicious++;
+      if (reasonStr.includes('malware') || reasonStr.includes('malicious')) typeCounts.malware++;
+      if (reasonStr.includes('spam')) typeCounts.spam++;
+      if (!reasonStr.includes('phishing') && !reasonStr.includes('malware') && !reasonStr.includes('spam')) typeCounts.suspicious++;
     } else {
       typeCounts.clean++;
     }

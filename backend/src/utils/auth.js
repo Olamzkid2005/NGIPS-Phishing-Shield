@@ -4,7 +4,7 @@
  */
 
 import crypto from 'crypto';
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 
 // Configuration constants (should be in environment variables)
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -35,7 +35,8 @@ export function isValidEmail(email) {
 
 // In-memory token store (use database in production)
 const refreshTokens = new Map();
-const users = new Map(); // In-memory user store
+const usersById = new Map();
+const usersByEmail = new Map();
 
 /**
  * Hash a password using PBKDF2 with high iterations (production-ready)
@@ -55,6 +56,7 @@ export async function hashPassword(password) {
  * Compare password with hash using constant-time comparison
  */
 export async function comparePassword(password, hash) {
+  if (typeof password !== 'string' || typeof hash !== 'string') return false;
   return new Promise((resolve) => {
     try {
       const parts = hash.split(':');
@@ -107,6 +109,11 @@ export function generateAccessToken(payload) {
  * Verify a JSON Web Token
  */
 export function verifyAccessToken(token) {
+  if (typeof token !== 'string' || !token.includes('.')) {
+    const error = new Error('Invalid token format');
+    error.name = 'JsonWebTokenError';
+    throw error;
+  }
   const [header, payloadEncoded, signature] = token.split('.');
   
   const expectedSignature = crypto
@@ -122,9 +129,16 @@ export function verifyAccessToken(token) {
     throw error;
   }
   
-  const payload = JSON.parse(Buffer.from(payloadEncoded, 'base64url').toString());
+  let payload;
+  try {
+    payload = JSON.parse(Buffer.from(payloadEncoded, 'base64url').toString());
+  } catch {
+    const error = new Error('Invalid token payload');
+    error.name = 'JsonWebTokenError';
+    throw error;
+  }
   
-  if (payload.exp < Math.floor(Date.now() / 1000)) {
+  if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
     const error = new Error('Token expired');
     error.name = 'TokenExpiredError';
     throw error;
@@ -149,8 +163,13 @@ export function generateRefreshToken(userId) {
   
   refreshTokens.set(token, refreshToken);
   
-  // TODO(tech-debt): Persist refresh tokens to database - in-memory only for dev
-  // await prisma.refreshToken.create({ data: refreshToken });
+  // Prune expired tokens periodically (prevent memory leak)
+  if (refreshTokens.size > 10000) {
+    const now = Date.now();
+    for (const [key, value] of refreshTokens) {
+      if (new Date(value.expiresAt).getTime() < now) refreshTokens.delete(key);
+    }
+  }
   
   return token;
 }
@@ -210,8 +229,11 @@ export async function createUser(email, password, role = 'user') {
     createdAt: new Date().toISOString()
   };
   
-  users.set(id, user);
-  users.set(email, user); // Index by email
+  if (findUserByEmail(email)) {
+    throw new Error(`User with email ${email} already exists`);
+  }
+  usersById.set(id, user);
+  usersByEmail.set(email, user);
   
   return { id, email, role };
 }
@@ -220,14 +242,14 @@ export async function createUser(email, password, role = 'user') {
  * Find user by ID
  */
 export function findUserById(id) {
-  return users.get(id) || null;
+  return usersById.get(id) || null;
 }
 
 /**
  * Find user by email
  */
 export function findUserByEmail(email) {
-  return users.get(email) || null;
+  return usersByEmail.get(email) || null;
 }
 
 /**

@@ -78,10 +78,14 @@ def cmd_list(args):
         is_prod = production == e['hash']
         marker = '>> PROD' if is_prod else '     '
         metrics = e.get('metrics', {})
+        def fmt_metric(key):
+            val = metrics.get(key)
+            if val is None: return '?'
+            return f'{val:>6.4f}'
         print(f"  {marker} {e['name']:25s} {e['hash'][:12]}  "
-              f"acc={metrics.get('accuracy', '?'):>6s}  "
-              f"f1={metrics.get('f1', '?'):>6s}  "
-              f"auc={metrics.get('roc_auc', '?'):>6s}  "
+              f"acc={fmt_metric('accuracy')}  "
+              f"f1={fmt_metric('f1')}  "
+              f"auc={fmt_metric('roc_auc')}  "
               f"{e['timestamp'][:19]}  {e['size_kb']:>7.1f}KB")
 
 

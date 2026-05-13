@@ -9,6 +9,7 @@
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { vectorize } from './vectorizer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MODELS_DIR = join(__dirname, '../../../ml-service/models');
@@ -75,6 +76,9 @@ export async function loadModels() {
     }
     try {
       const session = await ort.InferenceSession.create(path);
+      if (models[name]) {
+        try { await models[name].release(); } catch {}
+      }
       models[name] = session;
       anyLoaded = true;
       console.log(`[ML] Loaded ONNX model: ${name} from ${path}`);
@@ -103,22 +107,22 @@ function sigmoid(x) {
   return 1 / (1 + Math.exp(-x));
 }
 
-async function runModel(sessionUrl, floatsNdarray) {
-  const session = models[sessionUrl];
-  if (!session) throw new Error(`Model ${sessionUrl} not loaded`);
+async function runModel(modelNameKey, floatsNdarray) {
+  const session = models[modelNameKey];
+  if (!session) throw new Error(`Model ${modelNameKey} not loaded`);
 
   const feeds = {};
-  const inputNames = session.inputNames;
-  const outputNames = session.outputNames;
+  const [inputName] = session.inputNames;
+  const [outputName] = session.outputNames;
 
-  feeds[inputNames[0]] = new ort.Tensor('float32', floatsNdarray, [1, floatsNdarray.length]);
+  feeds[inputName] = new ort.Tensor('float32', floatsNdarray, [1, floatsNdarray.length]);
 
   const results = await session.run(feeds);
-  const output = results[outputNames[0]];
-  return output.data; // Float32Array
+  const output = results[outputName];
+  return output.data;
 }
 
-function getPhishingProbability(outputData, modelName) {
+function getPhishingProbability(outputData, _modelName) {
   // ONNX classifier output varies by model type.
   // For LogisticRegression (ONNX LinearClassifier): [label, score]
   // For MultinomialNB: raw probabilities
@@ -145,9 +149,6 @@ export async function predictPhishing(url) {
   const start = Date.now();
 
   try {
-    // Lazy-import vectorizer to avoid circular deps
-    const { vectorize } = await import('./vectorizer.js');
-
     const modelScores = {};
     let anySuccess = false;
 
@@ -165,14 +166,16 @@ export async function predictPhishing(url) {
     }
 
     const validScores = Object.entries(modelScores)
-      .filter(([, v]) => v !== null)
-      .map(([name, score]) => ({ name, score, weight: ENSEMBLE_WEIGHTS[name] }));
+      .filter(([, v]) => v !== null && v !== undefined)
+      .map(([name, score]) => ({ name, score, weight: ENSEMBLE_WEIGHTS[name] ?? 0 }))
+      .filter(x => x.weight > 0);
 
     if (validScores.length === 0) {
-      return { success: false, error: 'All models failed' };
+      return { success: false, error: 'All models failed or zero weight' };
     }
 
     const totalWeight = validScores.reduce((s, x) => s + x.weight, 0);
+    if (totalWeight === 0) return { success: false, error: 'Zero total weight' };
     const ensembleScore = validScores.reduce((s, x) => s + x.score * x.weight, 0) / totalWeight;
 
     const latency = Date.now() - start;
@@ -197,6 +200,7 @@ export async function predictPhishing(url) {
 // ---------- Canary Deployment ----------
 
 export async function deployCandidate(candidateModel, modelName) {
+  if (!ort) throw new Error('ONNX Runtime not initialized. Call loadModels() first.');
   const path = join(MODELS_DIR, candidateModel);
   if (!existsSync(path)) {
     throw new Error(`Candidate model not found: ${path}`);
@@ -218,13 +222,13 @@ export async function promoteCandidate(modelName) {
 }
 
 export async function rollbackModel(modelName) {
-  // Fall back to default model
-  const defaultName = `logistic_regression` === modelName || `multinomial_nb` === modelName ? modelName : null;
-  if (defaultName) {
-    modelRegistry.active[modelName] = defaultName;
-    delete modelRegistry.candidates[modelName];
-    console.log(`[ML] Rolled back ${modelName} to default`);
+  const defaults = ['logistic_regression', 'multinomial_nb'];
+  if (!defaults.includes(modelName)) {
+    throw new Error(`Cannot rollback unknown model: ${modelName}`);
   }
+  modelRegistry.active[modelName] = modelName;
+  delete modelRegistry.candidates[modelName];
+  console.log(`[ML] Rolled back ${modelName} to default`);
 }
 
 // ---------- Status ----------

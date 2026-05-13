@@ -163,7 +163,7 @@ function extractFeatures(url) {
 
   const domainInfo = extractDomainInfo(normalizedUrl);
   const charCounts = countCharacters(url);
-  const { specialCharCount } = charCounts;
+  const { specialCharCount, digitCount, letterCount, uppercaseCount } = charCounts;
   const patterns = countPatterns(url);
 
   // Check for port
@@ -411,11 +411,11 @@ async function analyzeUrlEnsemble(url) {
 
   if (mlResult && mlResult.success && mlResult.data) {
     mlAvailable = true;
-    mlConfidence = mlResult.data.ml_confidence;
+    mlConfidence = mlResult.data.ml_confidence ?? mlResult.data.confidence ?? 0;
     modelScores = mlResult.data.model_scores;
 
     // Ensemble: 30% heuristic + 70% ML
-    finalConfidence = (heuristicResult.confidence * 0.3) + (mlResult.data.confidence * 0.7);
+    finalConfidence = (heuristicResult.confidence * 0.3) + ((mlConfidence ?? 0) * 0.7);
 
     // Combine reasons from both systems
     finalReasons = [...heuristicResult.reasons];

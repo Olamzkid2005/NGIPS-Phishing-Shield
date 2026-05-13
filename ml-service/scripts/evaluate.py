@@ -53,7 +53,7 @@ def load_test_data(data_path):
     df = df.dropna(subset=[url_col, label_col])
     df[url_col] = df[url_col].astype(str)
     df = df[df[url_col].str.strip() != '']
-    return df[url_col], df[label_col]
+    return (df[url_col], df[label_col])
 
 
 def evaluate(model, X_test, y_test):
@@ -65,7 +65,7 @@ def evaluate(model, X_test, y_test):
         proba = model.predict_proba(X_test)
         classes = list(model.classes_)
         bad_idx = classes.index('bad') if 'bad' in classes else classes.index(1)
-        roc_auc = roc_auc_score(y_test, proba[:, bad_idx], multi_class='raise')
+        roc_auc = roc_auc_score(y_test, proba[:, bad_idx], multi_class='ovr')
     except Exception:
         roc_auc = None
 
@@ -100,10 +100,11 @@ def main():
         print(json.dumps({'success': False, 'error': f'Model not found at {args.model}'}), flush=True)
         sys.exit(1)
 
-    X_test, y_test = load_test_data(args.data)
-    if X_test is None:
+    test_result = load_test_data(args.data)
+    if test_result is None:
         print(json.dumps({'success': False, 'error': f'Test data not found at {args.data}'}), flush=True)
         sys.exit(1)
+    X_test, y_test = test_result
 
     try:
         metrics = evaluate(model, X_test, y_test)

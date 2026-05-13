@@ -78,7 +78,8 @@ const Feedback: React.FC = () => {
     const reviewed = feedback.filter((f) => f.status === 'reviewed').length;
     const actioned = feedback.filter((f) => f.status === 'actioned').length;
     const falsePositives = feedback.filter((f) => f.isFalsePositive).length;
-    const accuracyRate = total > 0 ? ((total - falsePositives) / total) * 100 : 0;
+    const pageTotal = feedback.length;
+    const accuracyRate = pageTotal > 0 ? ((pageTotal - falsePositives) / pageTotal) * 100 : 0;
     return { total, pending, reviewed, actioned, falsePositives, accuracyRate };
   }, [feedback, pagination.total]);
 

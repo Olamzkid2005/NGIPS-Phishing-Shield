@@ -25,8 +25,12 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Graceful shutdown
-process.on('beforeExit', async () => {
-  await prisma.$disconnect();
-});
+async function disconnectPrisma() {
+  try { await prisma.$disconnect(); } catch {}
+}
+
+process.on('beforeExit', disconnectPrisma);
+process.on('SIGTERM', () => { disconnectPrisma().then(() => process.exit(0)); });
+process.on('SIGINT', () => { disconnectPrisma().then(() => process.exit(0)); });
 
 export default prisma;

@@ -44,7 +44,9 @@ const Settings: React.FC = () => {
         if (parsed.theme) setTheme(parsed.theme);
         if (parsed.autoRefresh !== undefined) setAutoRefresh(parsed.autoRefresh);
         if (parsed.refreshInterval) setRefreshInterval(parsed.refreshInterval);
-        if (parsed.notifications) setNotifications(parsed.notifications);
+        if (parsed.notifications && typeof parsed.notifications === 'object' && !Array.isArray(parsed.notifications)) {
+          setNotifications((prev) => ({ ...prev, ...parsed.notifications }));
+        }
         if (parsed.adminApiKey) setAdminApiKey(parsed.adminApiKey);
       } catch { /* ignore */ }
     }
@@ -55,7 +57,7 @@ const Settings: React.FC = () => {
       theme, autoRefresh, refreshInterval, notifications, adminApiKey,
     }));
     localStorage.setItem('ngips-admin-key', JSON.stringify(adminApiKey));
-  }, [theme, autoRefresh, refreshInterval, notifications]);
+  }, [theme, autoRefresh, refreshInterval, notifications, adminApiKey]);
 
   async function checkHealth() {
     try {

@@ -11,7 +11,8 @@ import crypto, { timingSafeEqual } from 'crypto';
 import { errorHandler } from './utils/errors.js';
 import { authMiddleware } from './utils/auth.js';
 import { logger } from './utils/logger.js';
-import { loadModelsAndVectorizers, getMLStatus, deployCandidate, promoteCandidate, rollbackModel, setTrafficSplit } from './utils/onnxInference.js';
+import { loadModelsAndVectorizers, getMLStatus } from './utils/mlInference.js';
+import { deployCandidate, promoteCandidate, rollbackModel, setTrafficSplit } from './utils/onnxInference.js';
 import { analyzeUrlHandler, getScansHandler, getScanByIdHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
 import { getStatsHandler } from './routes/stats.js';
 import { getTrendsHandler, getTopDomainsHandler, getThreatClassificationHandler } from './routes/analytics.js';
@@ -310,8 +311,9 @@ app.post('/v1/admin/calibrate', adminAuth, (req, res) => {
 });
 
 // POST /v1/admin/clear-history - Clear all scan history
-app.post('/v1/admin/clear-history', adminAuth, (req, res) => {
-  scanHistory.clear();
+app.post('/v1/admin/clear-history', adminAuth, async (req, res) => {
+  const { prisma } = await import('./utils/database.js');
+  await prisma.scan.deleteMany();
   return res.json({ message: 'History cleared', timestamp: new Date().toISOString() });
 });
 
@@ -346,10 +348,8 @@ app.post('/v1/admin/evaluate', adminAuth, async (req, res) => {
 // GET /v1/admin/models/status - Model version and canary status
 app.get('/v1/admin/models/status', adminAuth, async (req, res) => {
   const status = getMLStatus();
-  const { getFeatureSummary } = await import('./utils/featureStore.js');
   return res.json({
     ...status,
-    featureStore: getFeatureSummary(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -462,10 +462,8 @@ async function startServer() {
   // Load ML models (non-blocking, system works without them)
   await loadModelsAndVectorizers();
 
-  // Wire up auto-retrain on drift detection
+  // Wire up auto-retrain on drift detection (top-level imports already in scope)
   if (process.env.AUTO_RETRAIN_ENABLED !== 'false') {
-    const { triggerRetrain } = await import('./utils/retrain.js');
-    const { scanHistory } = await import('./routes/analyze.js');
     monitor.setOnDriftCallback(async (psi) => {
       logger.warn('[AUTO-RETRAIN] Drift detected, triggering retrain', { psi });
       const result = await triggerRetrain(scanHistory);
