@@ -382,6 +382,22 @@ async function startServer() {
   // Load ML models (non-blocking, system works without them)
   await loadModels();
 
+  // Wire up auto-retrain on drift detection
+  if (process.env.AUTO_RETRAIN_ENABLED !== 'false') {
+    const { triggerRetrain } = await import('./utils/retrain.js');
+    const { scanHistory } = await import('./routes/analyze.js');
+    monitor.setOnDriftCallback(async (psi) => {
+      logger.warn('[AUTO-RETRAIN] Drift detected, triggering retrain', { psi });
+      const result = await triggerRetrain(scanHistory);
+      if (result.success) {
+        logger.info('[AUTO-RETRAIN] Complete', result.metrics);
+      } else {
+        logger.error('[AUTO-RETRAIN] Failed', { error: result.error });
+      }
+      return result;
+    });
+  }
+
   if (!process.env.ADMIN_API_KEY) {
     logger.warn('[AUTH] ADMIN_API_KEY not set. Admin endpoints will be inaccessible.');
   }

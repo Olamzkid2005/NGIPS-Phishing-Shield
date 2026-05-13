@@ -16,6 +16,11 @@ class ModelMonitor {
     this.baselineDistribution = null;
     this.alerts = [];
     this.maxHistorySize = MAX_PREDICTIONS_HISTORY;
+    this.onDriftCallback = null;
+  }
+
+  setOnDriftCallback(callback) {
+    this.onDriftCallback = callback;
   }
 
   /**
@@ -96,6 +101,11 @@ class ModelMonitor {
           psi: result.psi,
           message: `Data drift detected (PSI: ${result.psi.toFixed(3)}). Model retraining recommended.`
         });
+        if (this.onDriftCallback) {
+          this.onDriftCallback(result.psi).catch(err => {
+            console.error('[MONITOR] Auto-retrain callback failed:', err.message);
+          });
+        }
       }
     }
 
