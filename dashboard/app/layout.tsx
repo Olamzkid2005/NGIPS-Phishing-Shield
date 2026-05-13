@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AppShell } from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'NGIPS Phishing Shield',
@@ -24,7 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
