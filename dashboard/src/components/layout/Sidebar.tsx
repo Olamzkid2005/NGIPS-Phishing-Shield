@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, createContext, useContext, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -91,7 +93,7 @@ export const Sidebar = ({ children }: SidebarProps) => {
           {/* Logo */}
           <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
             {!isCollapsed && (
-              <Link to="/" className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2">
                 <Shield className="h-8 w-8 text-primary-600" />
                 <span className="font-bold text-gray-900 dark:text-white">NGIPS Shield</span>
               </Link>
@@ -113,7 +115,7 @@ export const Sidebar = ({ children }: SidebarProps) => {
               return (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  href={item.href}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     isActive
@@ -133,7 +135,7 @@ export const Sidebar = ({ children }: SidebarProps) => {
           {/* Theme toggle */}
           <div className="border-t border-gray-200 p-2 dark:border-gray-700">
             <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark')}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               {theme === 'dark' ? (

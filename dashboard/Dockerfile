@@ -20,6 +20,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_BASE_URL=http://backend:8000
 
 # Copy standalone output from builder
 COPY --from=builder /app/.next/standalone ./
