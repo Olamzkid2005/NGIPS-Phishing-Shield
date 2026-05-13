@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ML Inference Script for Phishing Detection
-Called by Express backend via child_process
+ML Inference Script for Phishing Detection (DEPRECATED)
+Kept as fallback for local testing. Production uses FastAPI service.
 Usage: python predict.py <url> [threshold]
 """
 

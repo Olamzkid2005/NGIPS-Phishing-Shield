@@ -13,8 +13,8 @@ import { logger } from './logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const DATA_DIR = join(__dirname, '../../data');
-const RETRAIN_SCRIPT = join(__dirname, '../../../ml-service/retrain.py');
-const EVALUATE_SCRIPT = join(__dirname, '../../../ml-service/evaluate.py');
+const RETRAIN_SCRIPT = join(__dirname, '../../../ml-service/scripts/retrain.py');
+const EVALUATE_SCRIPT = join(__dirname, '../../../ml-service/scripts/evaluate.py');
 const PYTHON_CMD = process.platform === 'win32' ? 'python' : 'python3';
 
 /**

@@ -87,7 +87,9 @@ def convert_with_explicit_tokenizer(pipeline, name):
     vocabulary = vectorizer.vocabulary_
 
     # Rebuild a CountVectorizer that uses a plain regex tokenizer
-    # (the stemmer/stopwords logic will be lost, but the vocabulary is preserved)
+    # WARNING: This drops SnowballStemmer, causing training-serving skew.
+    # Stemming changes token counts, which changes the feature vector.
+    # ONNX export is experimental — use .pkl for production inference.
     def simple_tokenizer(text):
         return re.findall(r'[A-Za-z]+', text)
 
