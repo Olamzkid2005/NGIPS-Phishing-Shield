@@ -299,8 +299,13 @@ app.post('/v1/admin/retrain', adminAuth, async (req, res) => {
   }
 });
 
-// POST /v1/admin/calibrate - Set baseline distribution for drift detection
+// POST /v1/admin/calibrate - Set baseline distribution for drift detection (min 100 predictions)
 app.post('/v1/admin/calibrate', adminAuth, (req, res) => {
+  if (monitor.predictions.length < 100) {
+    return res.status(400).json({
+      error: { code: 'INSUFFICIENT_DATA', message: `Need at least 100 predictions, have ${monitor.predictions.length}` }
+    });
+  }
   monitor.setBaseline();
   return res.json({
     message: 'Baseline distribution calibrated',
@@ -489,6 +494,12 @@ async function startServer() {
   const gracefulShutdown = async (signal) => {
     logger.info(`[SHUTDOWN] Received ${signal}, starting graceful shutdown...`);
 
+    // Force exit after 10 seconds if graceful shutdown fails
+    const forceExitTimer = setTimeout(() => {
+      logger.error('[SHUTDOWN] Forcing exit after timeout');
+      process.exit(1);
+    }, 10000);
+
     // Stop accepting new connections
     server.close(async (err) => {
       if (err) {
@@ -496,6 +507,7 @@ async function startServer() {
         process.exit(1);
       }
 
+      clearTimeout(forceExitTimer);
       logger.info('[SHUTDOWN] No more incoming connections');
 
       try {
@@ -510,12 +522,6 @@ async function startServer() {
       logger.info('[SHUTDOWN] Graceful shutdown complete');
       process.exit(0);
     });
-
-    // Force exit after 10 seconds if graceful shutdown fails
-    setTimeout(() => {
-      logger.error('[SHUTDOWN] Forcing exit after timeout');
-      process.exit(1);
-    }, 10000);
   };
 
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

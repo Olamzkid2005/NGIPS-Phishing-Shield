@@ -115,10 +115,11 @@ export async function getTrendsHandler(req, res) {
   const dayMs = 24 * 60 * 60 * 1000;
   const weekMs = 7 * dayMs;
 
+  const midnightToday = Math.floor(now / dayMs) * dayMs;
   const scans = await prisma.scan.findMany({
     where: {
       createdAt: {
-        gte: new Date(now - days * dayMs)
+        gte: new Date(midnightToday - (days - 1) * dayMs)
       }
     }
   });

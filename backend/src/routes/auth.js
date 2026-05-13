@@ -123,14 +123,15 @@ export async function refreshHandler(req, res) {
 
   const userId = stored.userId;
   const user = findUserById(userId);
-  const role = user?.role || 'user';
+  if (!user) {
+    return res.status(401).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
+  }
 
   // Generate new tokens BEFORE invalidating old one
-  // This ensures user doesn't lose access if generation fails
   let newAccessToken;
   let newRefreshToken;
   try {
-    newAccessToken = generateAccessToken({ sub: userId, role });
+    newAccessToken = generateAccessToken({ sub: userId, email: user.email, role: user.role });
     newRefreshToken = generateRefreshToken(userId);
   } catch (error) {
     console.error('[AUTH] Token generation failed:', error.message);

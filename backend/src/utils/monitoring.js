@@ -17,6 +17,7 @@ class ModelMonitor {
     this.alerts = [];
     this.maxHistorySize = MAX_PREDICTIONS_HISTORY;
     this.onDriftCallback = null;
+    this.lastDriftAlertTime = 0;
   }
 
   setOnDriftCallback(callback) {
@@ -94,9 +95,8 @@ class ModelMonitor {
     const result = this.calculateDrift();
 
     if (result.drifted) {
-      const lastAlert = this.alerts[this.alerts.length - 1];
-    const lastAlertTs = lastAlert ? (typeof lastAlert.timestamp === 'number' ? lastAlert.timestamp : new Date(lastAlert.timestamp).getTime()) : 0;
-    if (!lastAlert || lastAlert.type !== 'DRIFT_DETECTED' || Date.now() - lastAlertTs > 300000) {
+      if (Date.now() - this.lastDriftAlertTime > 300000) {
+        this.lastDriftAlertTime = Date.now();
         this.addAlert({
           type: 'DRIFT_DETECTED',
           psi: result.psi,
@@ -104,9 +104,7 @@ class ModelMonitor {
         });
         if (this.onDriftCallback) {
           Promise.resolve(this.onDriftCallback(result.psi)).catch(err => {
-            if (err instanceof Error) {
-              console.error('[MONITOR] Auto-retrain callback failed:', err.message);
-            }
+            console.error('[MONITOR] Auto-retrain callback failed:', err instanceof Error ? err.message : String(err));
           });
         }
       }
@@ -148,7 +146,9 @@ class ModelMonitor {
   }
 
   setBaseline() {
+    if (this.predictions.length < 100) return null;
     this.baselineDistribution = this.getConfidenceDistribution();
+    return this.baselineDistribution;
   }
 
   reset() {
