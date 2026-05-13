@@ -57,4 +57,4 @@ export const ALLOWED_ORIGINS = [
 
 // Model versions
 export const MODEL_VERSION = '1.0.0';
-export const ML_METHOD_PYTHON = 'FastAPI HTTP (Ensemble)';
+export const ML_METHOD_PYTHON = 'ONNX Node.js (Ensemble)';

@@ -11,11 +11,12 @@ import crypto, { timingSafeEqual } from 'crypto';
 import { errorHandler } from './utils/errors.js';
 import { authMiddleware } from './utils/auth.js';
 import { logger } from './utils/logger.js';
-import { loadModels, getMLStatus } from './utils/mlInference.js';
+import { loadModelsAndVectorizers, getMLStatus, deployCandidate, promoteCandidate, rollbackModel, setTrafficSplit } from './utils/onnxInference.js';
 import { analyzeUrlHandler, getScansHandler, getScanByIdHandler, submitFeedbackHandler, scanHistory } from './routes/analyze.js';
 import { getStatsHandler } from './routes/stats.js';
 import { getTrendsHandler, getTopDomainsHandler, getThreatClassificationHandler } from './routes/analytics.js';
 import { getAllFeedbackHandler, updateFeedbackHandler } from './routes/feedback.js';
+import { exportFeedbackForRetraining } from './utils/feedbackRepository.js';
 import { getSettingsHandler, updateSettingsHandler } from './routes/settings.js';
 import { loginHandler, refreshHandler, logoutHandler, meHandler } from './routes/auth.js';
 import { triggerRetrain, evaluateModel } from './utils/retrain.js';
@@ -340,6 +341,85 @@ app.post('/v1/admin/evaluate', adminAuth, async (req, res) => {
   }
 });
 
+// ---------- Canary Deployment & Model Management (A/B Testing) ----------
+
+// GET /v1/admin/models/status - Model version and canary status
+app.get('/v1/admin/models/status', adminAuth, async (req, res) => {
+  const status = getMLStatus();
+  const { getFeatureSummary } = await import('./utils/featureStore.js');
+  return res.json({
+    ...status,
+    featureStore: getFeatureSummary(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// POST /v1/admin/models/candidate - Deploy a candidate model for canary testing
+app.post('/v1/admin/models/candidate', adminAuth, async (req, res) => {
+  const { modelName, candidatePath } = req.body;
+  if (!modelName || !candidatePath) {
+    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'modelName and candidatePath required' } });
+  }
+  try {
+    const result = await deployCandidate(candidatePath, modelName);
+    return res.json({ message: 'Candidate deployed', ...result });
+  } catch (error) {
+    return res.status(500).json({ error: { code: 'CANDIDATE_FAILED', message: error.message } });
+  }
+});
+
+// POST /v1/admin/models/promote - Promote candidate to active
+app.post('/v1/admin/models/promote', adminAuth, async (req, res) => {
+  const { modelName } = req.body;
+  if (!modelName) {
+    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'modelName required' } });
+  }
+  try {
+    const result = await promoteCandidate(modelName);
+    return res.json({ message: 'Candidate promoted', ...result });
+  } catch (error) {
+    return res.status(500).json({ error: { code: 'PROMOTE_FAILED', message: error.message } });
+  }
+});
+
+// POST /v1/admin/models/rollback - Rollback to default model
+app.post('/v1/admin/models/rollback', adminAuth, async (req, res) => {
+  const { modelName } = req.body;
+  try {
+    await rollbackModel(modelName || 'logistic_regression');
+    return res.json({ message: 'Rolled back', modelName });
+  } catch (error) {
+    return res.status(500).json({ error: { code: 'ROLLBACK_FAILED', message: error.message } });
+  }
+});
+
+// POST /v1/admin/models/traffic-split - Set canary traffic percentage
+app.post('/v1/admin/models/traffic-split', adminAuth, (req, res) => {
+  const { ratio } = req.body;
+  if (typeof ratio !== 'number' || ratio < 0 || ratio > 1) {
+    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'ratio must be 0-1' } });
+  }
+  setTrafficSplit(ratio);
+  return res.json({ message: `Traffic split set to ${(ratio * 100).toFixed(0)}%`, ratio });
+});
+
+// ---------- Feedback Export for Retraining ----------
+
+// GET /v1/admin/feedback/export - Export feedback as CSV for model retraining
+app.get('/v1/admin/feedback/export', adminAuth, async (req, res) => {
+  try {
+    const csv = await exportFeedbackForRetraining();
+    if (!csv) {
+      return res.status(500).json({ error: { code: 'EXPORT_FAILED', message: 'No feedback data available' } });
+    }
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=feedback_export_${Date.now()}.csv`);
+    return res.send(csv);
+  } catch (error) {
+    return res.status(500).json({ error: { code: 'EXPORT_ERROR', message: error.message } });
+  }
+});
+
 // Error handling
 app.use(errorHandler);
 
@@ -380,7 +460,7 @@ async function startServer() {
   validateEnvironment();
 
   // Load ML models (non-blocking, system works without them)
-  await loadModels();
+  await loadModelsAndVectorizers();
 
   // Wire up auto-retrain on drift detection
   if (process.env.AUTO_RETRAIN_ENABLED !== 'false') {

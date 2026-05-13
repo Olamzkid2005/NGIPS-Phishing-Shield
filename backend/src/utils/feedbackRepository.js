@@ -1,63 +1,59 @@
 /**
  * Feedback Repository - Handles feedback storage
- * Uses in-memory store with database fallback when Prisma is available
+ * Persists to SQLite via Prisma with in-memory fallback
  */
 
 import { v4 as uuidv4 } from 'uuid';
 import { ValidationError, NotFoundError } from './errors.js';
-
-// In-memory feedback store
-const feedbackStore = new Map();
+import { prisma } from './database.js';
+import { logger } from './logger.js';
 
 /**
- * Create new feedback
+ * Create new feedback (persisted to SQLite + in-memory cache)
  */
 export async function createFeedback(data) {
   const { scanId, isFalsePositive, userComment } = data;
-  
-  const feedback = {
-    id: `fb_${uuidv4().slice(0, 8)}`,
+
+  const id = `fb_${uuidv4().slice(0, 8)}`;
+  const feedbackData = {
+    id,
     scanId,
     isFalsePositive: isFalsePositive || false,
     userComment: userComment || null,
     status: 'pending',
-    createdAt: new Date().toISOString()
+    createdAt: new Date(),
   };
-  
-  feedbackStore.set(feedback.id, feedback);
-  
-  // TODO(tech-debt): When Prisma is available, persist to database:
-  // await prisma.feedback.create({ data: feedback });
-  
-  return feedback;
+
+  try {
+    await prisma.feedback.create({ data: feedbackData });
+  } catch (dbError) {
+    logger.warn('[FEEDBACK] DB persist failed, using in-memory', { error: dbError.message });
+    feedbackData.createdAt = feedbackData.createdAt.toISOString();
+  }
+
+  return { ...feedbackData, createdAt: feedbackData.createdAt.toISOString() };
 }
 
 /**
  * Get feedback by ID
  */
 export async function getFeedbackById(id) {
-  const feedback = feedbackStore.get(id);
-  
-  if (!feedback) {
-    // TODO(tech-debt): Try database when available:
-    // const feedback = await prisma.feedback.findUnique({ where: { id } });
-    throw new NotFoundError('Feedback not found');
-  }
-  
-  return feedback;
+  try {
+    const feedback = await prisma.feedback.findUnique({ where: { id } });
+    if (feedback) return feedback;
+  } catch { /* fall through */ }
+  throw new NotFoundError('Feedback not found');
 }
 
 /**
  * Get feedback by scan ID
  */
 export async function getFeedbackByScanId(scanId) {
-  const feedbacks = Array.from(feedbackStore.values())
-    .filter(f => f.scanId === scanId);
-  
-  // TODO(tech-debt): Query database when available:
-  // const feedbacks = await prisma.feedback.findMany({ where: { scanId } });
-  
-  return feedbacks;
+  try {
+    return await prisma.feedback.findMany({ where: { scanId } });
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -65,69 +61,94 @@ export async function getFeedbackByScanId(scanId) {
  */
 export async function getAllFeedback(options = {}) {
   const { page = 1, limit = 50, status } = options;
-  
-  let feedbacks = Array.from(feedbackStore.values())
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  if (status) {
-    feedbacks = feedbacks.filter(f => f.status === status);
+  const skip = (page - 1) * limit;
+
+  const where = status ? { status } : {};
+
+  try {
+    const [data, total] = await Promise.all([
+      prisma.feedback.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.feedback.count({ where }),
+    ]);
+
+    return {
+      data: data.map(f => ({ ...f, createdAt: f.createdAt.toISOString() })),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  } catch {
+    return { data: [], pagination: { page, limit, total: 0, totalPages: 0 } };
   }
-  
-  const offset = (page - 1) * limit;
-  const paginated = feedbacks.slice(offset, offset + limit);
-  
-  return {
-    data: paginated,
-    pagination: {
-      page,
-      limit,
-      total: feedbacks.length,
-      totalPages: Math.ceil(feedbacks.length / limit)
-    }
-  };
 }
 
 /**
  * Update feedback status
  */
 export async function updateFeedbackStatus(id, status) {
-  const feedback = feedbackStore.get(id);
-  
-  if (!feedback) {
+  try {
+    const feedback = await prisma.feedback.update({
+      where: { id },
+      data: { status },
+    });
+    return feedback;
+  } catch {
     throw new NotFoundError('Feedback not found');
   }
-  
-  feedback.status = status;
-  feedbackStore.set(id, feedback);
-  
-  // TODO(tech-debt): Update in database when available:
-  // await prisma.feedback.update({ where: { id }, data: { status } });
-  
-  return feedback;
 }
 
 /**
  * Get feedback statistics
  */
 export async function getFeedbackStats() {
-  const feedbacks = Array.from(feedbackStore.values());
-  const total = feedbacks.length;
-  const falsePositives = feedbacks.filter(f => f.isFalsePositive).length;
-  const falsePositiveRate = total > 0 ? falsePositives / total : 0;
-  
-  const byStatus = { pending: 0, reviewed: 0, actioned: 0 };
-  for (const feedback of feedbacks) {
-    if (feedback.status in byStatus) {
-      byStatus[feedback.status]++;
-    }
+  try {
+    const [total, falsePositives, pending, reviewed, actioned] = await Promise.all([
+      prisma.feedback.count(),
+      prisma.feedback.count({ where: { isFalsePositive: true } }),
+      prisma.feedback.count({ where: { status: 'pending' } }),
+      prisma.feedback.count({ where: { status: 'reviewed' } }),
+      prisma.feedback.count({ where: { status: 'actioned' } }),
+    ]);
+
+    return {
+      total,
+      falsePositives,
+      falsePositiveRate: total > 0 ? Math.round((falsePositives / total) * 10000) / 10000 : 0,
+      byStatus: { pending, reviewed, actioned },
+    };
+  } catch {
+    return { total: 0, falsePositives: 0, falsePositiveRate: 0, byStatus: { pending: 0, reviewed: 0, actioned: 0 } };
   }
-  
-  return {
-    total,
-    falsePositives,
-    falsePositiveRate: Math.round(falsePositiveRate * 10000) / 10000,
-    byStatus
-  };
+}
+
+/**
+ * Export feedback as CSV for model retraining
+ */
+export async function exportFeedbackForRetraining() {
+  try {
+    const feedbacks = await prisma.feedback.findMany({
+      include: { scan: true },
+    });
+
+    const rows = ['url,confidence,is_phishing,feedback_correct,timestamp'];
+    for (const fb of feedbacks) {
+      if (!fb.scan) continue;
+      const url = `"${(fb.scan.url || '').replace(/"/g, '""')}"`;
+      const confidence = fb.scan.confidence ?? 0;
+      const isPhishing = fb.scan.action === 'block' ? 1 : 0;
+      const feedbackCorrect = fb.isFalsePositive ? 0 : 1;
+      const timestamp = fb.createdAt.toISOString();
+      rows.push(`${url},${confidence},${isPhishing},${feedbackCorrect},${timestamp}`);
+    }
+
+    return rows.join('\n');
+  } catch (error) {
+    logger.error('[FEEDBACK] Export failed', { error: error.message });
+    return null;
+  }
 }
 
 export default {
@@ -136,5 +157,6 @@ export default {
   getFeedbackByScanId,
   getAllFeedback,
   updateFeedbackStatus,
-  getFeedbackStats
+  getFeedbackStats,
+  exportFeedbackForRetraining,
 };
