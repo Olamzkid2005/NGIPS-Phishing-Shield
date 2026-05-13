@@ -9,6 +9,15 @@ from app.models.loader import get_loaded_models
 logger = logging.getLogger(__name__)
 
 
+def get_phishing_class_index(model):
+    classes = list(model.classes_)
+    if 'bad' in classes:
+        return classes.index('bad')
+    elif 1 in classes:
+        return classes.index(1)
+    raise ValueError(f"Model classes {classes} do not contain 'bad' or 1")
+
+
 def predict_url(url: str) -> dict:
     models = get_loaded_models()
     if not models:
@@ -21,7 +30,8 @@ def predict_url(url: str) -> dict:
     for name, model in models.items():
         try:
             proba = model.predict_proba([url])[0]
-            phishing_prob = float(proba[1])
+            bad_idx = get_phishing_class_index(model)
+            phishing_prob = float(proba[bad_idx])
             model_scores[name] = round(phishing_prob, 6)
             weight = ENSEMBLE_WEIGHTS.get(name, 1.0)
             weighted_sum += phishing_prob * weight
